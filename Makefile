@@ -1,4 +1,9 @@
+BIN?=treeman
+
 .PHONY: generate
 generate:
 	go generate ./...
-	sed -i 's/AddChildrenIDs/AddChildIDs/' ent/proto/entpb/entpb_directory_service.go
+
+.PHONY: build
+build:
+	go build -o $(BIN) ./main.go

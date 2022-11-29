@@ -5,9 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"entgo.io/contrib/entproto"
 	"entgo.io/ent"
-	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -25,29 +23,20 @@ type Directory struct {
 // Fields of the Directory.
 func (Directory) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("name").NotEmpty().Annotations(entproto.Field(2)),
+		field.String("name").NotEmpty(),
 		// NOTE(jaosorior): Can't use JSON if we're using protobufs
-		field.String("metadata").Optional().Annotations(entproto.Field(3)),
-		field.Time("created_at").Default(time.Now).Immutable().Annotations(entproto.Field(4)),
-		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now).Annotations(entproto.Field(5)),
-		field.Time("deleted_at").Optional().Nillable().Annotations(entproto.Field(6)),
-		field.Bool("is_root").Default(false).Immutable().Annotations(entproto.Field(7)),
+		field.String("metadata").Optional(),
+		field.Time("created_at").Default(time.Now).Immutable(),
+		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
+		field.Time("deleted_at").Optional().Nillable(),
+		field.Bool("is_root").Default(false).Immutable(),
 	}
 }
 
 func (Directory) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("children", Directory.Type).Annotations(entproto.Field(8)),
-		edge.From("parent", Directory.Type).Ref("children").Unique().Annotations(entproto.Field(9)),
-	}
-}
-
-func (Directory) Annotations() []schema.Annotation {
-	return []schema.Annotation{
-		entproto.Message(),
-		entproto.Service(
-			entproto.Methods(entproto.MethodCreate | entproto.MethodGet | entproto.MethodList | entproto.MethodUpdate | entproto.MethodDelete),
-		),
+		edge.To("children", Directory.Type),
+		edge.From("parent", Directory.Type).Ref("children").Unique(),
 	}
 }
 
