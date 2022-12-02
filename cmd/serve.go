@@ -5,14 +5,26 @@ package cmd
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"net/http"
 	"os"
 	"os/signal"
+	"time"
 
-	"github.com/cockroachdb/cockroach-go/v2/testserver"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"go.infratographer.com/x/ginx"
+	"go.infratographer.com/x/loggingx"
+	"go.infratographer.com/x/viperx"
+	"go.uber.org/zap"
 
-	"github.com/JAORMX/fertilesoil/treemanager"
+	dbutils "github.com/JAORMX/fertilesoil/internal/db/utils"
+	"github.com/JAORMX/fertilesoil/internal/httpsrv/treemanager"
+)
+
+const (
+	defaultListen                = ":8080"
+	defaultServerShutdownTimeout = 5 * time.Second
 )
 
 // serveCmd represents the treemanager command
@@ -25,54 +37,68 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		ts, err := testserver.NewTestServer()
-		if err != nil {
-			return fmt.Errorf("failed to start test server: %w", err)
-		}
-
-		defer ts.Stop()
-
-		if err := ts.WaitForInit(); err != nil {
-			return fmt.Errorf("failed to wait for test server to initialize: %w", err)
-		}
-
-		// catch SIGTERM and SIGINT
-		ctx, cancel := context.WithCancel(cmd.Context())
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt)
-		defer func() {
-			signal.Stop(c)
-			cancel()
-		}()
-		go func() {
-			select {
-			case <-c:
-				cancel()
-			case <-ctx.Done():
-			}
-		}()
-
-		sc := treemanager.ServerConfig{
-			SQLDriver:        "postgres",
-			ConnectionString: ts.PGURL().String(),
-			BootStrap:        true,
-		}
-
-		return sc.Run(ctx)
-	},
+	RunE: serverRunE,
 }
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
 
-	// Here you will define your flags and configuration settings.
+	v := viper.GetViper()
+	dbutils.RegisterDBArgs(v, serveCmd.Flags())
+	ginx.MustViperFlags(v, serveCmd.Flags(), defaultListen)
+	loggingx.MustViperFlags(v, serveCmd.Flags())
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// treemanagerCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// Server flags
+	flags := serveCmd.Flags()
+	flags.Duration("server-shutdown-timeout", defaultServerShutdownTimeout, "Time to wait for the server to shutdown gracefully")
+	viperx.MustBindFlag(v, "server.shutdown", flags.Lookup("server-shutdown-timeout"))
+}
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// treemanagerCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+func serverRunE(cmd *cobra.Command, args []string) error {
+	l := initLogger()
+	defer l.Sync()
+
+	// catch SIGTERM and SIGINT
+	ctx, cancel := context.WithCancel(cmd.Context())
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	defer func() {
+		signal.Stop(c)
+		cancel()
+	}()
+
+	// TODO(jaosorior): Add tracing
+	db, dberr := dbutils.GetDBConnection(viper.GetViper(), "directory", false)
+	if dberr != nil {
+		return dberr
+	}
+
+	s := treemanager.NewServer(
+		l, viper.GetString("listen"), db, viper.GetBool("debug"), viper.GetDuration("server.shutdown"))
+
+	go func() {
+		if err := s.Run(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			l.Error("server error", zap.Error(err))
+		}
+	}()
+
+	select {
+	case <-c:
+		cancel()
+	case <-ctx.Done():
+	}
+
+	if err := s.Shutdown(); err != nil {
+		l.Fatal("server forced to shutdown", zap.Error(err))
+	}
+	return nil
+}
+
+func initLogger() *zap.Logger {
+	sl := loggingx.InitLogger("treemanager", loggingx.Config{
+		Debug:  viper.GetBool("debug"),
+		Pretty: viper.GetBool("pretty"),
+	})
+
+	return sl.Desugar()
 }
