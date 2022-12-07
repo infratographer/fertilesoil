@@ -62,7 +62,7 @@ func getNewDB(t *testing.T) *sql.DB {
 		t.Fatalf("error setting dialect: %v", err)
 	}
 
-	if err := goose.Up(dbConn, "migrations"); err != nil {
+	if err := goose.Up(dbConn, "."); err != nil {
 		t.Fatalf("error running migrations: %v", err)
 	}
 	return dbConn
@@ -268,14 +268,21 @@ func TestGetMultipleParents(t *testing.T) {
 		Name:   "testdir3",
 		Parent: d2,
 	}
+	d4 := &v1.Directory{
+		Name:   "testdir4",
+		Parent: d3,
+	}
 
-	_, err := store.CreateDirectory(context.Background(), d1)
+	rd1, err := store.CreateDirectory(context.Background(), d1)
 	assert.NoError(t, err, "error creating directory")
 
 	_, err = store.CreateDirectory(context.Background(), d2)
 	assert.NoError(t, err, "error creating directory")
 
 	rd3, err := store.CreateDirectory(context.Background(), d3)
+	assert.NoError(t, err, "error creating directory")
+
+	rd4, err := store.CreateDirectory(context.Background(), d4)
 	assert.NoError(t, err, "error creating directory")
 
 	parents, gperr := store.GetParents(context.Background(), rd3.ID)
@@ -285,6 +292,14 @@ func TestGetMultipleParents(t *testing.T) {
 	assert.Equal(t, d2.ID, parents[0], "id should match")
 	assert.Equal(t, d1.ID, parents[1], "id should match")
 	assert.Equal(t, rootdir.ID, parents[2], "id should match")
+
+	parents, gperr = store.GetParentsUntilAncestor(context.Background(), rd4.ID, rd1.ID)
+	assert.NoError(t, gperr, "error getting parents")
+	assert.Len(t, parents, 3, "should have 3 parents")
+
+	assert.Equal(t, d3.ID, parents[0], "id should match")
+	assert.Equal(t, d2.ID, parents[1], "id should match")
+	assert.Equal(t, d1.ID, parents[2], "id should match")
 }
 
 func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {

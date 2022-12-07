@@ -11,6 +11,7 @@ import (
 type Reader interface {
 	GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.Directory, error)
 	GetParents(ctx context.Context, id v1.DirectoryID) ([]v1.DirectoryID, error)
+	GetParentsUntilAncestor(ctx context.Context, child v1.DirectoryID, ancestor v1.DirectoryID) ([]v1.DirectoryID, error)
 	GetChildren(ctx context.Context, id v1.DirectoryID) ([]v1.DirectoryID, error)
 }
 

@@ -19,4 +19,8 @@ var (
 
 	// ErrReadOnly is returned when a write operation is attempted on a read-only driver
 	ErrReadOnly = errors.New("attempted write operation on read-only driver")
+
+	// ErrNoRootAccess is returned when a root directory is attempted to be accessed
+	// without root access
+	ErrNoRootAccess = errors.New("attempted to access root directory without root access")
 )
