@@ -10,7 +10,7 @@ import (
 
 	v1 "github.com/JAORMX/fertilesoil/api/v1"
 	"github.com/JAORMX/fertilesoil/internal/httpsrv/common"
-	"github.com/JAORMX/fertilesoil/storage/db/driver"
+	"github.com/JAORMX/fertilesoil/storage/crdb/driver"
 )
 
 func NewServer(
@@ -20,7 +20,7 @@ func NewServer(
 	debug bool,
 	shutdownTime time.Duration,
 ) *common.Server {
-	t := driver.NewDBDriver(db)
+	t := driver.NewDirectoryAdminDriver(db)
 	s := common.NewServer(logger, listen, db, t, debug, shutdownTime)
 
 	s.SetHandler(newHandler(logger, s))

@@ -18,7 +18,7 @@ var defaultEmptyLogFn = func(c *gin.Context) []zapcore.Field { return []zapcore.
 
 type Server struct {
 	DB              *sql.DB
-	T               storage.Storage
+	T               storage.DirectoryAdmin
 	L               *zap.Logger
 	debug           bool
 	srv             *http.Server
@@ -31,7 +31,7 @@ func NewServer(
 	logger *zap.Logger,
 	listen string,
 	db *sql.DB,
-	t storage.Storage,
+	t storage.DirectoryAdmin,
 	debug bool,
 	shutdownTime time.Duration,
 ) *Server {

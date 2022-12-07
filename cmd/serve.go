@@ -19,7 +19,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/JAORMX/fertilesoil/internal/httpsrv/treemanager"
-	dbutils "github.com/JAORMX/fertilesoil/storage/db/utils"
+	dbutils "github.com/JAORMX/fertilesoil/storage/crdb/utils"
 )
 
 const (

@@ -14,7 +14,7 @@ type Driver struct {
 	db *sql.DB
 }
 
-func NewDBDriver(db *sql.DB) storage.Storage {
+func NewDirectoryAdminDriver(db *sql.DB) storage.DirectoryAdmin {
 	return &Driver{
 		db: db,
 	}

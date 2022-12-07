@@ -14,8 +14,8 @@ import (
 
 	v1 "github.com/JAORMX/fertilesoil/api/v1"
 	"github.com/JAORMX/fertilesoil/storage"
-	"github.com/JAORMX/fertilesoil/storage/db/driver"
-	"github.com/JAORMX/fertilesoil/storage/db/migrations"
+	"github.com/JAORMX/fertilesoil/storage/crdb/driver"
+	"github.com/JAORMX/fertilesoil/storage/crdb/migrations"
 )
 
 var (
@@ -68,7 +68,7 @@ func getNewDB(t *testing.T) *sql.DB {
 	return dbConn
 }
 
-func withRootDir(t *testing.T, store storage.Storage) *v1.Directory {
+func withRootDir(t *testing.T, store storage.DirectoryAdmin) *v1.Directory {
 	d := &v1.Directory{
 		Name: "root",
 	}
@@ -83,7 +83,7 @@ func withRootDir(t *testing.T, store storage.Storage) *v1.Directory {
 
 func TestCreateAndGetRoot(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	rd := withRootDir(t, store)
 
@@ -96,7 +96,7 @@ func TestCreateAndGetRoot(t *testing.T) {
 
 func TestListRootOneRoot(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	rd := withRootDir(t, store)
 
@@ -108,7 +108,7 @@ func TestListRootOneRoot(t *testing.T) {
 
 func TestListMultipleRoots(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	rd1 := withRootDir(t, store)
 	rd2 := withRootDir(t, store)
@@ -126,7 +126,7 @@ func TestListMultipleRoots(t *testing.T) {
 
 func TestCreateMultipleRoots(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	rd1 := withRootDir(t, store)
 	rd2 := withRootDir(t, store)
@@ -147,7 +147,7 @@ func TestCreateMultipleRoots(t *testing.T) {
 
 func TestCantCreateRootWithParent(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	d := &v1.Directory{
 		Name:   "root",
@@ -161,7 +161,7 @@ func TestCantCreateRootWithParent(t *testing.T) {
 
 func TestCreateAndGetDirectory(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -195,7 +195,7 @@ func TestCreateAndGetDirectory(t *testing.T) {
 
 func TestCreateDirectoryWithParentThatDoesntExist(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	d := &v1.Directory{
 		Name:   "testdir",
@@ -209,7 +209,7 @@ func TestCreateDirectoryWithParentThatDoesntExist(t *testing.T) {
 
 func TestCreateDirectoryWithoutParent(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	d := &v1.Directory{
 		Name: "testdir",
@@ -222,7 +222,7 @@ func TestCreateDirectoryWithoutParent(t *testing.T) {
 
 func TestQueryUnknownDirectory(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	d, err := store.GetDirectory(context.Background(), v1.DirectoryID(uuid.New()))
 	assert.ErrorIs(t, err, driver.ErrDirectoryNotFound, "should have errored")
@@ -231,7 +231,7 @@ func TestQueryUnknownDirectory(t *testing.T) {
 
 func TestGetSingleParent(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -252,7 +252,7 @@ func TestGetSingleParent(t *testing.T) {
 
 func TestGetMultipleParents(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -289,7 +289,7 @@ func TestGetMultipleParents(t *testing.T) {
 
 func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -300,7 +300,7 @@ func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
 
 func TestGetParentsFromUnknownShouldFail(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	parents, err := store.GetParents(context.Background(), v1.DirectoryID(uuid.New()))
 	assert.ErrorIs(t, err, driver.ErrDirectoryNotFound, "should have errored")
@@ -309,7 +309,7 @@ func TestGetParentsFromUnknownShouldFail(t *testing.T) {
 
 func TestGetChildrenBasic(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -330,7 +330,7 @@ func TestGetChildrenBasic(t *testing.T) {
 
 func TestGetChildrenMultiple(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -379,7 +379,7 @@ func TestGetChildrenMultiple(t *testing.T) {
 
 func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -390,7 +390,7 @@ func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
 
 func TestGetChildrenFromUnknownReturnsEmpty(t *testing.T) {
 	db := getNewDB(t)
-	store := driver.NewDBDriver(db)
+	store := driver.NewDirectoryAdminDriver(db)
 
 	children, err := store.GetChildren(context.Background(), v1.DirectoryID(uuid.New()))
 	assert.NoError(t, err, "should have errored")
