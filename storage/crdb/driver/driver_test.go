@@ -225,7 +225,7 @@ func TestQueryUnknownDirectory(t *testing.T) {
 	store := driver.NewDirectoryAdminDriver(db)
 
 	d, err := store.GetDirectory(context.Background(), v1.DirectoryID(uuid.New()))
-	assert.ErrorIs(t, err, driver.ErrDirectoryNotFound, "should have errored")
+	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
 	assert.Nil(t, d, "should be nil")
 }
 
@@ -303,7 +303,7 @@ func TestGetParentsFromUnknownShouldFail(t *testing.T) {
 	store := driver.NewDirectoryAdminDriver(db)
 
 	parents, err := store.GetParents(context.Background(), v1.DirectoryID(uuid.New()))
-	assert.ErrorIs(t, err, driver.ErrDirectoryNotFound, "should have errored")
+	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
 	assert.Nil(t, parents, "should be nil")
 }
 

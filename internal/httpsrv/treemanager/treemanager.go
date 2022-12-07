@@ -10,6 +10,7 @@ import (
 
 	v1 "github.com/JAORMX/fertilesoil/api/v1"
 	"github.com/JAORMX/fertilesoil/internal/httpsrv/common"
+	"github.com/JAORMX/fertilesoil/storage"
 	"github.com/JAORMX/fertilesoil/storage/crdb/driver"
 )
 
@@ -109,7 +110,7 @@ func getDirectory(s *common.Server) gin.HandlerFunc {
 		}
 
 		dir, err := s.T.GetDirectory(c, id)
-		if errors.Is(err, driver.ErrDirectoryNotFound) {
+		if errors.Is(err, storage.ErrDirectoryNotFound) {
 			c.JSON(404, gin.H{
 				"error": "directory not found",
 			})
@@ -148,7 +149,7 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 
 		var parent *v1.Directory
 		parent, err = s.T.GetDirectory(c, id)
-		if errors.Is(err, driver.ErrDirectoryNotFound) {
+		if errors.Is(err, storage.ErrDirectoryNotFound) {
 			c.JSON(400, gin.H{
 				"error": "parent directory not found",
 			})
@@ -168,7 +169,7 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 		}
 
 		rd, err := s.T.CreateDirectory(c, &d)
-		if errors.Is(err, driver.ErrDirectoryWithoutParent) {
+		if errors.Is(err, storage.ErrDirectoryWithoutParent) {
 			c.JSON(400, gin.H{
 				"error": "directory must have a parent directory",
 			})
@@ -200,7 +201,7 @@ func listChildren(s *common.Server) gin.HandlerFunc {
 		}
 
 		dir, err := s.T.GetDirectory(c, id)
-		if errors.Is(err, driver.ErrDirectoryNotFound) {
+		if errors.Is(err, storage.ErrDirectoryNotFound) {
 			c.JSON(404, gin.H{
 				"error": "directory not found",
 			})
@@ -241,7 +242,7 @@ func listParents(s *common.Server) gin.HandlerFunc {
 		}
 
 		dir, err := s.T.GetDirectory(c, id)
-		if errors.Is(err, driver.ErrDirectoryNotFound) {
+		if errors.Is(err, storage.ErrDirectoryNotFound) {
 			c.JSON(404, gin.H{
 				"error": "directory not found",
 			})

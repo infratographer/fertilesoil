@@ -1,4 +1,4 @@
-package driver
+package storage
 
 import (
 	"errors"
@@ -16,4 +16,7 @@ var (
 
 	// ErrDirectoryNotFound is returned when a directory is not found
 	ErrDirectoryNotFound = errors.New("directory not found")
+
+	// ErrReadOnly is returned when a write operation is attempted on a read-only driver
+	ErrReadOnly = errors.New("attempted write operation on read-only driver")
 )
