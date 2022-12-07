@@ -1,4 +1,4 @@
-package transformers_test
+package driver_test
 
 import (
 	"context"
@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	v1 "github.com/JAORMX/fertilesoil/api/v1"
-	"github.com/JAORMX/fertilesoil/db"
-	"github.com/JAORMX/fertilesoil/internal/db/transformers"
+	"github.com/JAORMX/fertilesoil/storage/db/driver"
+	"github.com/JAORMX/fertilesoil/storage/db/migrations"
 )
 
 var (
@@ -56,7 +56,7 @@ func getNewDB(t *testing.T) *sql.DB {
 		t.Fatalf("error opening database: %v", err)
 	}
 
-	goose.SetBaseFS(db.Migrations)
+	goose.SetBaseFS(migrations.Migrations)
 	if err := goose.SetDialect("postgres"); err != nil {
 		t.Fatalf("error setting dialect: %v", err)
 	}
@@ -67,7 +67,7 @@ func getNewDB(t *testing.T) *sql.DB {
 	return dbConn
 }
 
-func withRootDir(t *testing.T, trans *transformers.APIDBTransformer) *v1.Directory {
+func withRootDir(t *testing.T, trans *driver.APIDBTransformer) *v1.Directory {
 	d := &v1.Directory{
 		Name: "root",
 	}
@@ -82,7 +82,7 @@ func withRootDir(t *testing.T, trans *transformers.APIDBTransformer) *v1.Directo
 
 func TestCreateAndGetRoot(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	rd := withRootDir(t, trans)
 
@@ -95,7 +95,7 @@ func TestCreateAndGetRoot(t *testing.T) {
 
 func TestListRootOneRoot(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	rd := withRootDir(t, trans)
 
@@ -107,7 +107,7 @@ func TestListRootOneRoot(t *testing.T) {
 
 func TestListMultipleRoots(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	rd1 := withRootDir(t, trans)
 	rd2 := withRootDir(t, trans)
@@ -125,7 +125,7 @@ func TestListMultipleRoots(t *testing.T) {
 
 func TestCreateMultipleRoots(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	rd1 := withRootDir(t, trans)
 	rd2 := withRootDir(t, trans)
@@ -146,7 +146,7 @@ func TestCreateMultipleRoots(t *testing.T) {
 
 func TestCantCreateRootWithParent(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	d := &v1.Directory{
 		Name:   "root",
@@ -160,7 +160,7 @@ func TestCantCreateRootWithParent(t *testing.T) {
 
 func TestCreateAndGetDirectory(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	rootdir := withRootDir(t, trans)
 
@@ -194,7 +194,7 @@ func TestCreateAndGetDirectory(t *testing.T) {
 
 func TestCreateDirectoryWithParentThatDoesntExist(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	d := &v1.Directory{
 		Name:   "testdir",
@@ -208,7 +208,7 @@ func TestCreateDirectoryWithParentThatDoesntExist(t *testing.T) {
 
 func TestCreateDirectoryWithoutParent(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	d := &v1.Directory{
 		Name: "testdir",
@@ -221,16 +221,16 @@ func TestCreateDirectoryWithoutParent(t *testing.T) {
 
 func TestQueryUnknownDirectory(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	d, err := trans.GetDirectory(context.Background(), v1.DirectoryID(uuid.New()))
-	assert.ErrorIs(t, err, transformers.ErrDirectoryNotFound, "should have errored")
+	assert.ErrorIs(t, err, driver.ErrDirectoryNotFound, "should have errored")
 	assert.Nil(t, d, "should be nil")
 }
 
 func TestGetSingleParent(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	rootdir := withRootDir(t, trans)
 
@@ -251,7 +251,7 @@ func TestGetSingleParent(t *testing.T) {
 
 func TestGetMultipleParents(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	rootdir := withRootDir(t, trans)
 
@@ -288,7 +288,7 @@ func TestGetMultipleParents(t *testing.T) {
 
 func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	rootdir := withRootDir(t, trans)
 
@@ -299,16 +299,16 @@ func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
 
 func TestGetParentsFromUnknownShouldFail(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	parents, err := trans.GetParents(context.Background(), v1.DirectoryID(uuid.New()))
-	assert.ErrorIs(t, err, transformers.ErrDirectoryNotFound, "should have errored")
+	assert.ErrorIs(t, err, driver.ErrDirectoryNotFound, "should have errored")
 	assert.Nil(t, parents, "should be nil")
 }
 
 func TestGetChildrenBasic(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	rootdir := withRootDir(t, trans)
 
@@ -329,7 +329,7 @@ func TestGetChildrenBasic(t *testing.T) {
 
 func TestGetChildrenMultiple(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	rootdir := withRootDir(t, trans)
 
@@ -378,7 +378,7 @@ func TestGetChildrenMultiple(t *testing.T) {
 
 func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	rootdir := withRootDir(t, trans)
 
@@ -389,7 +389,7 @@ func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
 
 func TestGetChildrenFromUnknownReturnsEmpty(t *testing.T) {
 	db := getNewDB(t)
-	trans := transformers.NewAPIDBTransformer(db)
+	trans := driver.NewAPIDBTransformer(db)
 
 	children, err := trans.GetChildren(context.Background(), v1.DirectoryID(uuid.New()))
 	assert.NoError(t, err, "should have errored")

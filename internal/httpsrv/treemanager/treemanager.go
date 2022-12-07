@@ -9,8 +9,8 @@ import (
 	"go.uber.org/zap"
 
 	v1 "github.com/JAORMX/fertilesoil/api/v1"
-	"github.com/JAORMX/fertilesoil/internal/db/transformers"
 	"github.com/JAORMX/fertilesoil/internal/httpsrv/common"
+	"github.com/JAORMX/fertilesoil/storage/db/driver"
 )
 
 func NewServer(
@@ -20,7 +20,7 @@ func NewServer(
 	debug bool,
 	shutdownTime time.Duration,
 ) *common.Server {
-	t := transformers.NewAPIDBTransformer(db)
+	t := driver.NewAPIDBTransformer(db)
 	s := common.NewServer(logger, listen, db, t, debug, shutdownTime)
 
 	s.SetHandler(newHandler(logger, s))
@@ -109,7 +109,7 @@ func getDirectory(s *common.Server) gin.HandlerFunc {
 		}
 
 		dir, err := s.T.GetDirectory(c, id)
-		if errors.Is(err, transformers.ErrDirectoryNotFound) {
+		if errors.Is(err, driver.ErrDirectoryNotFound) {
 			c.JSON(404, gin.H{
 				"error": "directory not found",
 			})
@@ -148,7 +148,7 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 
 		var parent *v1.Directory
 		parent, err = s.T.GetDirectory(c, id)
-		if errors.Is(err, transformers.ErrDirectoryNotFound) {
+		if errors.Is(err, driver.ErrDirectoryNotFound) {
 			c.JSON(400, gin.H{
 				"error": "parent directory not found",
 			})
@@ -168,7 +168,7 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 		}
 
 		rd, err := s.T.CreateDirectory(c, &d)
-		if errors.Is(err, transformers.ErrDirectoryWithoutParent) {
+		if errors.Is(err, driver.ErrDirectoryWithoutParent) {
 			c.JSON(400, gin.H{
 				"error": "directory must have a parent directory",
 			})
@@ -200,7 +200,7 @@ func listChildren(s *common.Server) gin.HandlerFunc {
 		}
 
 		dir, err := s.T.GetDirectory(c, id)
-		if errors.Is(err, transformers.ErrDirectoryNotFound) {
+		if errors.Is(err, driver.ErrDirectoryNotFound) {
 			c.JSON(404, gin.H{
 				"error": "directory not found",
 			})
@@ -241,7 +241,7 @@ func listParents(s *common.Server) gin.HandlerFunc {
 		}
 
 		dir, err := s.T.GetDirectory(c, id)
-		if errors.Is(err, transformers.ErrDirectoryNotFound) {
+		if errors.Is(err, driver.ErrDirectoryNotFound) {
 			c.JSON(404, gin.H{
 				"error": "directory not found",
 			})

@@ -1,10 +1,10 @@
-package db_test
+package migrations_test
 
 import (
 	"database/sql"
 	"testing"
 
-	"github.com/JAORMX/fertilesoil/db"
+	"github.com/JAORMX/fertilesoil/storage/db/migrations"
 	"github.com/cockroachdb/cockroach-go/v2/testserver"
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +19,7 @@ func TestMigrations(t *testing.T) {
 	dbConn, dbopenerr := sql.Open(dbdialect, ts.PGURL().String())
 	assert.NoError(t, dbopenerr, "failed to open db connection")
 
-	goose.SetBaseFS(db.Migrations)
+	goose.SetBaseFS(migrations.Migrations)
 	assert.NoError(t, goose.SetDialect(dbdialect), "failed to set dialect")
 
 	t.Run("up", func(t *testing.T) {
