@@ -20,7 +20,7 @@ func NewServer(
 	debug bool,
 	shutdownTime time.Duration,
 ) *common.Server {
-	t := driver.NewAPIDBTransformer(db)
+	t := driver.NewDBDriver(db)
 	s := common.NewServer(logger, listen, db, t, debug, shutdownTime)
 
 	s.SetHandler(newHandler(logger, s))

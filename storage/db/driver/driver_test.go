@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	v1 "github.com/JAORMX/fertilesoil/api/v1"
+	"github.com/JAORMX/fertilesoil/storage"
 	"github.com/JAORMX/fertilesoil/storage/db/driver"
 	"github.com/JAORMX/fertilesoil/storage/db/migrations"
 )
@@ -67,12 +68,12 @@ func getNewDB(t *testing.T) *sql.DB {
 	return dbConn
 }
 
-func withRootDir(t *testing.T, trans *driver.APIDBTransformer) *v1.Directory {
+func withRootDir(t *testing.T, store storage.Storage) *v1.Directory {
 	d := &v1.Directory{
 		Name: "root",
 	}
 
-	rd, err := trans.CreateRoot(context.Background(), d)
+	rd, err := store.CreateRoot(context.Background(), d)
 	assert.NoError(t, err, "error creating root directory")
 	assert.NotNil(t, rd.Metadata, "metadata should not be nil")
 	assert.Equal(t, d.Name, rd.Name, "name should match")
@@ -82,12 +83,12 @@ func withRootDir(t *testing.T, trans *driver.APIDBTransformer) *v1.Directory {
 
 func TestCreateAndGetRoot(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	rd := withRootDir(t, trans)
+	rd := withRootDir(t, store)
 
 	// retrieve from db
-	queryrootdir, qerr := trans.GetDirectory(context.Background(), rd.ID)
+	queryrootdir, qerr := store.GetDirectory(context.Background(), rd.ID)
 	assert.NoError(t, qerr, "error querying db")
 	assert.Equal(t, rd.ID, queryrootdir.ID, "id should match")
 	assert.Equal(t, rd.Name, queryrootdir.Name, "name should match")
@@ -95,11 +96,11 @@ func TestCreateAndGetRoot(t *testing.T) {
 
 func TestListRootOneRoot(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	rd := withRootDir(t, trans)
+	rd := withRootDir(t, store)
 
-	r, err := trans.ListRoots(context.Background())
+	r, err := store.ListRoots(context.Background())
 	assert.NoError(t, err, "should not have errored")
 	assert.Len(t, r, 1, "should have 1 root")
 	assert.Contains(t, r, rd.ID, "should contain root")
@@ -107,14 +108,14 @@ func TestListRootOneRoot(t *testing.T) {
 
 func TestListMultipleRoots(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	rd1 := withRootDir(t, trans)
-	rd2 := withRootDir(t, trans)
-	rd3 := withRootDir(t, trans)
-	rd4 := withRootDir(t, trans)
+	rd1 := withRootDir(t, store)
+	rd2 := withRootDir(t, store)
+	rd3 := withRootDir(t, store)
+	rd4 := withRootDir(t, store)
 
-	r, err := trans.ListRoots(context.Background())
+	r, err := store.ListRoots(context.Background())
 	assert.NoError(t, err, "should not have errored")
 	assert.Len(t, r, 4, "should have 4 roots")
 	assert.Contains(t, r, rd1.ID, "should contain root")
@@ -125,10 +126,10 @@ func TestListMultipleRoots(t *testing.T) {
 
 func TestCreateMultipleRoots(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	rd1 := withRootDir(t, trans)
-	rd2 := withRootDir(t, trans)
+	rd1 := withRootDir(t, store)
+	rd2 := withRootDir(t, store)
 
 	assert.NotEqual(t, rd1.ID, rd2.ID, "ids should not match")
 
@@ -146,37 +147,37 @@ func TestCreateMultipleRoots(t *testing.T) {
 
 func TestCantCreateRootWithParent(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
 	d := &v1.Directory{
 		Name:   "root",
 		Parent: &v1.Directory{},
 	}
 
-	rd, err := trans.CreateRoot(context.Background(), d)
+	rd, err := store.CreateRoot(context.Background(), d)
 	assert.Error(t, err, "should have errored")
 	assert.Nil(t, rd, "should be nil")
 }
 
 func TestCreateAndGetDirectory(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	rootdir := withRootDir(t, trans)
+	rootdir := withRootDir(t, store)
 
 	d := &v1.Directory{
 		Name:   "testdir",
 		Parent: rootdir,
 	}
 
-	rd, err := trans.CreateDirectory(context.Background(), d)
+	rd, err := store.CreateDirectory(context.Background(), d)
 	assert.NoError(t, err, "error creating directory")
 	assert.NotNil(t, rd.Metadata, "metadata should not be nil")
 	assert.Equal(t, d.Name, rd.Name, "name should match")
 	assert.Equal(t, d.Parent.ID, rd.Parent.ID, "parent id should match")
 
 	// retrieve from db
-	querydir, qerr := trans.GetDirectory(context.Background(), rd.ID)
+	querydir, qerr := store.GetDirectory(context.Background(), rd.ID)
 	assert.NoError(t, qerr, "error querying db")
 	assert.Equal(t, rd.ID, querydir.ID, "id should match")
 
@@ -194,55 +195,55 @@ func TestCreateAndGetDirectory(t *testing.T) {
 
 func TestCreateDirectoryWithParentThatDoesntExist(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
 	d := &v1.Directory{
 		Name:   "testdir",
 		Parent: &v1.Directory{ID: v1.DirectoryID(uuid.New())},
 	}
 
-	rd, err := trans.CreateDirectory(context.Background(), d)
+	rd, err := store.CreateDirectory(context.Background(), d)
 	assert.Error(t, err, "should have errored")
 	assert.Nil(t, rd, "should be nil")
 }
 
 func TestCreateDirectoryWithoutParent(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
 	d := &v1.Directory{
 		Name: "testdir",
 	}
 
-	rd, err := trans.CreateDirectory(context.Background(), d)
+	rd, err := store.CreateDirectory(context.Background(), d)
 	assert.Error(t, err, "should have errored")
 	assert.Nil(t, rd, "should be nil")
 }
 
 func TestQueryUnknownDirectory(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	d, err := trans.GetDirectory(context.Background(), v1.DirectoryID(uuid.New()))
+	d, err := store.GetDirectory(context.Background(), v1.DirectoryID(uuid.New()))
 	assert.ErrorIs(t, err, driver.ErrDirectoryNotFound, "should have errored")
 	assert.Nil(t, d, "should be nil")
 }
 
 func TestGetSingleParent(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	rootdir := withRootDir(t, trans)
+	rootdir := withRootDir(t, store)
 
 	d := &v1.Directory{
 		Name:   "testdir",
 		Parent: rootdir,
 	}
 
-	rd, err := trans.CreateDirectory(context.Background(), d)
+	rd, err := store.CreateDirectory(context.Background(), d)
 	assert.NoError(t, err, "error creating directory")
 
-	parents, gperr := trans.GetParents(context.Background(), rd.ID)
+	parents, gperr := store.GetParents(context.Background(), rd.ID)
 	assert.NoError(t, gperr, "error getting parents")
 	assert.Len(t, parents, 1, "should have 1 parent")
 
@@ -251,9 +252,9 @@ func TestGetSingleParent(t *testing.T) {
 
 func TestGetMultipleParents(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	rootdir := withRootDir(t, trans)
+	rootdir := withRootDir(t, store)
 
 	d1 := &v1.Directory{
 		Name:   "testdir1",
@@ -268,16 +269,16 @@ func TestGetMultipleParents(t *testing.T) {
 		Parent: d2,
 	}
 
-	_, err := trans.CreateDirectory(context.Background(), d1)
+	_, err := store.CreateDirectory(context.Background(), d1)
 	assert.NoError(t, err, "error creating directory")
 
-	_, err = trans.CreateDirectory(context.Background(), d2)
+	_, err = store.CreateDirectory(context.Background(), d2)
 	assert.NoError(t, err, "error creating directory")
 
-	rd3, err := trans.CreateDirectory(context.Background(), d3)
+	rd3, err := store.CreateDirectory(context.Background(), d3)
 	assert.NoError(t, err, "error creating directory")
 
-	parents, gperr := trans.GetParents(context.Background(), rd3.ID)
+	parents, gperr := store.GetParents(context.Background(), rd3.ID)
 	assert.NoError(t, gperr, "error getting parents")
 	assert.Len(t, parents, 3, "should have 3 parents")
 
@@ -288,39 +289,39 @@ func TestGetMultipleParents(t *testing.T) {
 
 func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	rootdir := withRootDir(t, trans)
+	rootdir := withRootDir(t, store)
 
-	parents, gperr := trans.GetParents(context.Background(), rootdir.ID)
+	parents, gperr := store.GetParents(context.Background(), rootdir.ID)
 	assert.NoError(t, gperr, "error getting parents")
 	assert.Len(t, parents, 0, "should have 0 parents")
 }
 
 func TestGetParentsFromUnknownShouldFail(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	parents, err := trans.GetParents(context.Background(), v1.DirectoryID(uuid.New()))
+	parents, err := store.GetParents(context.Background(), v1.DirectoryID(uuid.New()))
 	assert.ErrorIs(t, err, driver.ErrDirectoryNotFound, "should have errored")
 	assert.Nil(t, parents, "should be nil")
 }
 
 func TestGetChildrenBasic(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	rootdir := withRootDir(t, trans)
+	rootdir := withRootDir(t, store)
 
 	d := &v1.Directory{
 		Name:   "testdir",
 		Parent: rootdir,
 	}
 
-	rd, err := trans.CreateDirectory(context.Background(), d)
+	rd, err := store.CreateDirectory(context.Background(), d)
 	assert.NoError(t, err, "error creating directory")
 
-	children, gperr := trans.GetChildren(context.Background(), rootdir.ID)
+	children, gperr := store.GetChildren(context.Background(), rootdir.ID)
 	assert.NoError(t, gperr, "error getting children")
 	assert.Len(t, children, 1, "should have 1 child")
 
@@ -329,9 +330,9 @@ func TestGetChildrenBasic(t *testing.T) {
 
 func TestGetChildrenMultiple(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	rootdir := withRootDir(t, trans)
+	rootdir := withRootDir(t, store)
 
 	d1 := &v1.Directory{
 		Name:   "testdir1",
@@ -353,19 +354,19 @@ func TestGetChildrenMultiple(t *testing.T) {
 		Parent: d1,
 	}
 
-	rd1, err := trans.CreateDirectory(context.Background(), d1)
+	rd1, err := store.CreateDirectory(context.Background(), d1)
 	assert.NoError(t, err, "error creating directory")
 
-	rd2, err := trans.CreateDirectory(context.Background(), d2)
+	rd2, err := store.CreateDirectory(context.Background(), d2)
 	assert.NoError(t, err, "error creating directory")
 
-	rd3, err := trans.CreateDirectory(context.Background(), d3)
+	rd3, err := store.CreateDirectory(context.Background(), d3)
 	assert.NoError(t, err, "error creating directory")
 
-	rd4, err := trans.CreateDirectory(context.Background(), d4)
+	rd4, err := store.CreateDirectory(context.Background(), d4)
 	assert.NoError(t, err, "error creating directory")
 
-	children, gperr := trans.GetChildren(context.Background(), rootdir.ID)
+	children, gperr := store.GetChildren(context.Background(), rootdir.ID)
 	assert.NoError(t, gperr, "error getting children")
 
 	assert.Len(t, children, 4, "should have 4 children")
@@ -378,20 +379,20 @@ func TestGetChildrenMultiple(t *testing.T) {
 
 func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	rootdir := withRootDir(t, trans)
+	rootdir := withRootDir(t, store)
 
-	children, err := trans.GetChildren(context.Background(), rootdir.ID)
+	children, err := store.GetChildren(context.Background(), rootdir.ID)
 	assert.NoError(t, err, "should have errored")
 	assert.Len(t, children, 0, "should have 0 children")
 }
 
 func TestGetChildrenFromUnknownReturnsEmpty(t *testing.T) {
 	db := getNewDB(t)
-	trans := driver.NewAPIDBTransformer(db)
+	store := driver.NewDBDriver(db)
 
-	children, err := trans.GetChildren(context.Background(), v1.DirectoryID(uuid.New()))
+	children, err := store.GetChildren(context.Background(), v1.DirectoryID(uuid.New()))
 	assert.NoError(t, err, "should have errored")
 	assert.Len(t, children, 0, "should have 0 children")
 }

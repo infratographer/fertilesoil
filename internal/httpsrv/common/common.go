@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/JAORMX/fertilesoil/storage/db/driver"
+	"github.com/JAORMX/fertilesoil/storage"
 	"github.com/gin-gonic/gin"
 	"go.infratographer.com/x/ginx"
 	"go.infratographer.com/x/versionx"
@@ -18,7 +18,7 @@ var defaultEmptyLogFn = func(c *gin.Context) []zapcore.Field { return []zapcore.
 
 type Server struct {
 	DB              *sql.DB
-	T               *driver.APIDBTransformer
+	T               storage.Storage
 	L               *zap.Logger
 	debug           bool
 	srv             *http.Server
@@ -31,7 +31,7 @@ func NewServer(
 	logger *zap.Logger,
 	listen string,
 	db *sql.DB,
-	t *driver.APIDBTransformer,
+	t storage.Storage,
 	debug bool,
 	shutdownTime time.Duration,
 ) *Server {
