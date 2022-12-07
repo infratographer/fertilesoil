@@ -1,6 +1,7 @@
 package treemanager
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"time"
@@ -43,6 +44,7 @@ func newHandler(logger *zap.Logger, s *common.Server) *gin.Engine {
 
 	r.GET("/api/v1/directories/:id/children", listChildren(s))
 	r.GET("/api/v1/directories/:id/parents", listParents(s))
+	r.GET("/api/v1/directories/:id/parents/:until", listParentsUntil(s))
 
 	return r
 }
@@ -101,25 +103,9 @@ func getDirectory(s *common.Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idstr := c.Param("id")
 
-		id, err := v1.ParseDirectoryID(idstr)
+		dir, err := getDirectoryFromReference(s.T, idstr)
 		if err != nil {
-			c.JSON(400, gin.H{
-				"error": "invalid id",
-			})
-			return
-		}
-
-		dir, err := s.T.GetDirectory(c, id)
-		if errors.Is(err, storage.ErrDirectoryNotFound) {
-			c.JSON(404, gin.H{
-				"error": "directory not found",
-			})
-			return
-		} else if err != nil {
-			s.L.Error("error getting directory", zap.Error(err))
-			c.JSON(500, gin.H{
-				"error": "internal server error",
-			})
+			outputGetDirectoryError(c, err)
 			return
 		}
 
@@ -192,25 +178,9 @@ func listChildren(s *common.Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idstr := c.Param("id")
 
-		id, err := v1.ParseDirectoryID(idstr)
+		dir, err := getDirectoryFromReference(s.T, idstr)
 		if err != nil {
-			c.JSON(400, gin.H{
-				"error": "invalid id",
-			})
-			return
-		}
-
-		dir, err := s.T.GetDirectory(c, id)
-		if errors.Is(err, storage.ErrDirectoryNotFound) {
-			c.JSON(404, gin.H{
-				"error": "directory not found",
-			})
-			return
-		} else if err != nil {
-			s.L.Error("error getting directory", zap.Error(err))
-			c.JSON(500, gin.H{
-				"error": "internal server error",
-			})
+			outputGetDirectoryError(c, err)
 			return
 		}
 
@@ -233,25 +203,9 @@ func listParents(s *common.Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idstr := c.Param("id")
 
-		id, err := v1.ParseDirectoryID(idstr)
+		dir, err := getDirectoryFromReference(s.T, idstr)
 		if err != nil {
-			c.JSON(400, gin.H{
-				"error": "invalid id",
-			})
-			return
-		}
-
-		dir, err := s.T.GetDirectory(c, id)
-		if errors.Is(err, storage.ErrDirectoryNotFound) {
-			c.JSON(404, gin.H{
-				"error": "directory not found",
-			})
-			return
-		} else if err != nil {
-			s.L.Error("error getting directory", zap.Error(err))
-			c.JSON(500, gin.H{
-				"error": "internal server error",
-			})
+			outputGetDirectoryError(c, err)
 			return
 		}
 
@@ -266,6 +220,71 @@ func listParents(s *common.Server) gin.HandlerFunc {
 
 		c.JSON(200, gin.H{
 			"directories": parents,
+		})
+	}
+}
+
+func listParentsUntil(s *common.Server) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		idstr := c.Param("id")
+
+		dir, err := getDirectoryFromReference(s.T, idstr)
+		if err != nil {
+			outputGetDirectoryError(c, err)
+			return
+		}
+
+		untilstr := c.Param("until")
+
+		untildir, err := getDirectoryFromReference(s.T, untilstr)
+		if err != nil {
+			outputGetDirectoryError(c, err)
+			return
+		}
+
+		parents, err := s.T.GetParentsUntilAncestor(c, dir.ID, untildir.ID)
+		if err != nil {
+			s.L.Error("error listing parents", zap.Error(err))
+			c.JSON(500, gin.H{
+				"error": "internal server error",
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"directories": parents,
+		})
+	}
+}
+
+func getDirectoryFromReference(drv storage.DirectoryAdmin, idstr string) (*v1.Directory, error) {
+	id, err := v1.ParseDirectoryID(idstr)
+	if err != nil {
+		return nil, err
+	}
+
+	dir, err := drv.GetDirectory(context.Background(), id)
+	if err != nil {
+		return nil, err
+	}
+
+	return dir, nil
+}
+
+func outputGetDirectoryError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, v1.ErrParsingID):
+		c.JSON(400, gin.H{
+			"error": "invalid id",
+		})
+
+	case errors.Is(err, storage.ErrDirectoryNotFound):
+		c.JSON(404, gin.H{
+			"error": "directory not found",
+		})
+	default:
+		c.JSON(500, gin.H{
+			"error": "internal server error",
 		})
 	}
 }

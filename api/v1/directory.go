@@ -1,9 +1,14 @@
 package v1
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+)
+
+var (
+	ErrParsingID = errors.New("error parsing id")
 )
 
 type Directory struct {
@@ -25,7 +30,7 @@ type DirectoryID uuid.UUID
 func ParseDirectoryID(id string) (DirectoryID, error) {
 	u, err := uuid.Parse(id)
 	if err != nil {
-		return DirectoryID{}, err
+		return DirectoryID{}, ErrParsingID
 	}
 
 	return DirectoryID(u), nil
