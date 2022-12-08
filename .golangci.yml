@@ -82,7 +82,7 @@ linters:
     - wastedassign
     - whitespace
     - contextcheck
-    # - cyclop
+    - cyclop
     # - exhaustivestruct
     # - forbidigo
     # - funlen
