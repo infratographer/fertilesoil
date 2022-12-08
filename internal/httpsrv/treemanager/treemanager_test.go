@@ -1,8 +1,11 @@
 package treemanager_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -340,4 +343,58 @@ func TestFullTree(t *testing.T) {
 	assert.Contains(t, dir2children.Directories, dir3.Directory.ID, "dir2 did not contain dir3 as child")
 	assert.Contains(t, dir2children.Directories, dir4.Directory.ID, "dir2 did not contain dir4 as child")
 	assert.Contains(t, dir2children.Directories, dir5.Directory.ID, "dir2 did not contain dir5 as child")
+}
+
+func TestCreateRootWithMalformedData(t *testing.T) {
+	t.Parallel()
+
+	skt := newUnixsocketPath(t)
+	srv := newTestServer(t, skt)
+	defer func() {
+		err := srv.Shutdown()
+		assert.NoError(t, err, "error shutting down server")
+	}()
+
+	go runTestServer(t, srv)
+
+	cli := newTestClient(t, skt)
+
+	waitForServer(t, cli)
+
+	c := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", skt)
+			},
+		},
+	}
+
+	u := baseServerAddress.JoinPath("/api/v1/roots")
+
+	// Invalid request with valid JSON
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+
+	err := enc.Encode(map[string]string{"foo": "bar"})
+	assert.NoError(t, err, "error encoding data")
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, u.String(), &buf)
+	assert.NoError(t, err, "error creating request")
+
+	resp, err := c.Do(req)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// invalid request with invalid JSON
+	buf.Reset()
+	buf.WriteString("{\"foo")
+
+	req, err = http.NewRequestWithContext(context.Background(), http.MethodPost, u.String(), &buf)
+	assert.NoError(t, err, "error creating request")
+
+	resp, err = c.Do(req)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
 }

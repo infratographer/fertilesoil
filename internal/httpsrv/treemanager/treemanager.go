@@ -82,7 +82,7 @@ func listRoots(s *common.Server) gin.HandlerFunc {
 func createRootDirectory(s *common.Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req v1.CreateDirectoryRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
+		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -139,7 +139,7 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 		}
 
 		var req v1.CreateDirectoryRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
+		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}

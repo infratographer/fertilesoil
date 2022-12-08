@@ -11,7 +11,7 @@ type DirectoryRequestMeta struct {
 
 type CreateDirectoryRequest struct {
 	DirectoryRequestMeta
-	Name     string            `json:"name"`
+	Name     string            `json:"name" binding:"required"`
 	Metadata DirectoryMetadata `json:"metadata"`
 }
 
