@@ -15,9 +15,9 @@ type Directory struct {
 	ID        DirectoryID       `json:"id"`
 	Name      string            `json:"name"`
 	Metadata  DirectoryMetadata `json:"metadata"`
-	CreatedAt time.Time         `json:"created_at"`
-	UpdatedAt time.Time         `json:"updated_at"`
-	DeletedAt time.Time         `json:"deleted_at"`
+	CreatedAt time.Time         `json:"createdAt"`
+	UpdatedAt time.Time         `json:"updatedAt"`
+	DeletedAt time.Time         `json:"deletedAt"`
 
 	// Parent is the parent directory.
 	// The visibility of this structure depends on the query.
