@@ -1,3 +1,4 @@
 .vscode
 treeman
 .tools/
+coverage.out
