@@ -21,6 +21,10 @@ import (
 
 var defaultEmptyLogFn = func(c *gin.Context) []zapcore.Field { return []zapcore.Field{} }
 
+const (
+	DefaultServerReadHeaderTimeout = 5 * time.Second
+)
+
 type Server struct {
 	DB              *sql.DB
 	T               storage.DirectoryAdmin
@@ -44,7 +48,8 @@ func NewServer(
 	unix string,
 ) *Server {
 	srv := &http.Server{
-		Addr: listen,
+		Addr:              listen,
+		ReadHeaderTimeout: DefaultServerReadHeaderTimeout,
 	}
 
 	s := &Server{
