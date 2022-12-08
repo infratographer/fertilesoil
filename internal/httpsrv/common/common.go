@@ -142,7 +142,7 @@ func (s *Server) Shutdown() error {
 // These functions should accept a context and only return an error. When adding
 // a readiness check a name is also provided, this name will be used when returning
 // the state of all the checks.
-func (s Server) AddReadinessCheck(name string, f ginx.CheckFunc) Server {
+func (s *Server) AddReadinessCheck(name string, f ginx.CheckFunc) *Server {
 	s.readinessChecks[name] = f
 
 	return s
