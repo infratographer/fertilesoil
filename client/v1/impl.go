@@ -157,6 +157,56 @@ func (c *httpClient) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.D
 	return &dir, nil
 }
 
+func (c *httpClient) GetParents(ctx context.Context, id v1.DirectoryID) (*v1.DirectoryList, error) {
+	path, err := url.JoinPath("/api/v1/directories", id.String(), "parents")
+	if err != nil {
+		return nil, fmt.Errorf("error getting parents: %w", err)
+	}
+
+	resp, err := c.DoRaw(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error getting parents: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error getting parents: %s", resp.Status)
+	}
+
+	var dirList v1.DirectoryList
+	err = dirList.Parse(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response: %w", err)
+	}
+
+	return &dirList, nil
+}
+
+func (c *httpClient) GetChildren(ctx context.Context, id v1.DirectoryID) (*v1.DirectoryList, error) {
+	path, err := url.JoinPath("/api/v1/directories", id.String(), "children")
+	if err != nil {
+		return nil, fmt.Errorf("error getting children: %w", err)
+	}
+
+	resp, err := c.DoRaw(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error getting children: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error getting children: %s", resp.Status)
+	}
+
+	var dirList v1.DirectoryList
+	err = dirList.Parse(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response: %w", err)
+	}
+
+	return &dirList, nil
+}
+
 func (c *httpClient) DoRaw(
 	ctx context.Context,
 	method string,

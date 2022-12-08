@@ -207,8 +207,11 @@ func listChildren(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"directories": children,
+		c.JSON(http.StatusOK, &v1.DirectoryList{
+			DirectoryRequestMeta: v1.DirectoryRequestMeta{
+				Version: v1.APIVersion,
+			},
+			Directories: children,
 		})
 	}
 }
@@ -232,8 +235,11 @@ func listParents(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"directories": parents,
+		c.JSON(http.StatusOK, &v1.DirectoryList{
+			DirectoryRequestMeta: v1.DirectoryRequestMeta{
+				Version: v1.APIVersion,
+			},
+			Directories: parents,
 		})
 	}
 }
