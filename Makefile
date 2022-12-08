@@ -16,7 +16,7 @@ test:
 .PHONY: coverage
 coverage:
 	@echo Generating coverage report...
-	@go test -timeout 30s -tags testtools ./... -race -coverprofile=coverage.out -covermode=atomic
+	@go test -timeout 30s -tags testtools ./... -coverprofile=coverage.out -covermode=atomic
 	@go tool cover -func=coverage.out
 	@go tool cover -html=coverage.out
 
