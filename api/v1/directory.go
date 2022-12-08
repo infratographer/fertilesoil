@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const ApiVersion = "v1"
+
 var (
 	ErrParsingID = errors.New("error parsing id")
 )
@@ -41,8 +43,3 @@ func (did DirectoryID) String() string {
 }
 
 type DirectoryMetadata map[string]string
-
-type CreateDirectoryRequest struct {
-	Name     string            `json:"name"`
-	Metadata DirectoryMetadata `json:"metadata"`
-}

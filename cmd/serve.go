@@ -52,6 +52,8 @@ func init() {
 	flags := serveCmd.Flags()
 	flags.Duration("server-shutdown-timeout", defaultServerShutdownTimeout, "Time to wait for the server to shutdown gracefully")
 	viperx.MustBindFlag(v, "server.shutdown", flags.Lookup("server-shutdown-timeout"))
+	flags.String("server-unix-socket", "", "Listen on a unix socket instead of a TCP socket.")
+	viperx.MustBindFlag(v, "server.unix_socket", flags.Lookup("server-unix-socket"))
 }
 
 func serverRunE(cmd *cobra.Command, args []string) error {
@@ -74,7 +76,13 @@ func serverRunE(cmd *cobra.Command, args []string) error {
 	}
 
 	s := treemanager.NewServer(
-		l, viper.GetString("listen"), db, viper.GetBool("debug"), viper.GetDuration("server.shutdown"))
+		l,
+		viper.GetString("listen"),
+		db,
+		viper.GetBool("debug"),
+		viper.GetDuration("server.shutdown"),
+		viper.GetString("server.unix_socket"),
+	)
 
 	go func() {
 		if err := s.Run(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {

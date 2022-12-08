@@ -2,20 +2,16 @@ package driver_test
 
 import (
 	"context"
-	"database/sql"
 	"net/url"
-	"strings"
 	"testing"
 
-	"github.com/cockroachdb/cockroach-go/v2/testserver"
 	"github.com/google/uuid"
-	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/assert"
 
 	v1 "github.com/JAORMX/fertilesoil/api/v1"
 	"github.com/JAORMX/fertilesoil/storage"
 	"github.com/JAORMX/fertilesoil/storage/crdb/driver"
-	"github.com/JAORMX/fertilesoil/storage/crdb/migrations"
+	"github.com/JAORMX/fertilesoil/storage/crdb/utils"
 )
 
 var (
@@ -23,49 +19,11 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	// Spawn CRDB instance
-	ts, err := testserver.NewTestServer()
-	if err != nil {
-		panic(err)
-	}
-	defer ts.Stop()
-
-	ts.WaitForInit()
-
-	baseDBURL = ts.PGURL()
-	// Reset Path so we can use the database in general
-	baseDBURL.Path = "/"
+	var stop func()
+	baseDBURL, stop = utils.NewTestDBServerOrDie()
+	defer stop()
 
 	m.Run()
-}
-
-func getNewDB(t *testing.T) *sql.DB {
-	dbName := strings.ToLower(strings.ReplaceAll(t.Name(), "/", "_"))
-
-	baseDB, err := sql.Open("postgres", baseDBURL.String())
-	if err != nil {
-		t.Fatalf("error opening database: %v", err)
-	}
-
-	if _, err := baseDB.Exec("CREATE DATABASE " + dbName); err != nil {
-		t.Fatalf("error creating database: %v", err)
-	}
-
-	dbURL := baseDBURL.JoinPath(dbName)
-	dbConn, err := sql.Open("postgres", dbURL.String())
-	if err != nil {
-		t.Fatalf("error opening database: %v", err)
-	}
-
-	goose.SetBaseFS(migrations.Migrations)
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("error setting dialect: %v", err)
-	}
-
-	if err := goose.Up(dbConn, "."); err != nil {
-		t.Fatalf("error running migrations: %v", err)
-	}
-	return dbConn
 }
 
 func withRootDir(t *testing.T, store storage.DirectoryAdmin) *v1.Directory {
@@ -82,7 +40,7 @@ func withRootDir(t *testing.T, store storage.DirectoryAdmin) *v1.Directory {
 }
 
 func TestCreateAndGetRoot(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	rd := withRootDir(t, store)
@@ -95,7 +53,7 @@ func TestCreateAndGetRoot(t *testing.T) {
 }
 
 func TestListRootOneRoot(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	rd := withRootDir(t, store)
@@ -107,7 +65,7 @@ func TestListRootOneRoot(t *testing.T) {
 }
 
 func TestListMultipleRoots(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	rd1 := withRootDir(t, store)
@@ -125,7 +83,7 @@ func TestListMultipleRoots(t *testing.T) {
 }
 
 func TestCreateMultipleRoots(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	rd1 := withRootDir(t, store)
@@ -146,7 +104,7 @@ func TestCreateMultipleRoots(t *testing.T) {
 }
 
 func TestCantCreateRootWithParent(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	d := &v1.Directory{
@@ -160,7 +118,7 @@ func TestCantCreateRootWithParent(t *testing.T) {
 }
 
 func TestCreateAndGetDirectory(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
@@ -194,7 +152,7 @@ func TestCreateAndGetDirectory(t *testing.T) {
 }
 
 func TestCreateDirectoryWithParentThatDoesntExist(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	d := &v1.Directory{
@@ -208,7 +166,7 @@ func TestCreateDirectoryWithParentThatDoesntExist(t *testing.T) {
 }
 
 func TestCreateDirectoryWithoutParent(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	d := &v1.Directory{
@@ -221,7 +179,7 @@ func TestCreateDirectoryWithoutParent(t *testing.T) {
 }
 
 func TestQueryUnknownDirectory(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	d, err := store.GetDirectory(context.Background(), v1.DirectoryID(uuid.New()))
@@ -230,7 +188,7 @@ func TestQueryUnknownDirectory(t *testing.T) {
 }
 
 func TestGetSingleParent(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
@@ -251,7 +209,7 @@ func TestGetSingleParent(t *testing.T) {
 }
 
 func TestGetMultipleParents(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
@@ -303,7 +261,7 @@ func TestGetMultipleParents(t *testing.T) {
 }
 
 func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
@@ -314,7 +272,7 @@ func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
 }
 
 func TestGetParentsFromUnknownShouldFail(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	parents, err := store.GetParents(context.Background(), v1.DirectoryID(uuid.New()))
@@ -323,7 +281,7 @@ func TestGetParentsFromUnknownShouldFail(t *testing.T) {
 }
 
 func TestGetChildrenBasic(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
@@ -344,7 +302,7 @@ func TestGetChildrenBasic(t *testing.T) {
 }
 
 func TestGetChildrenMultiple(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
@@ -393,7 +351,7 @@ func TestGetChildrenMultiple(t *testing.T) {
 }
 
 func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	rootdir := withRootDir(t, store)
@@ -404,7 +362,7 @@ func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
 }
 
 func TestGetChildrenFromUnknownReturnsEmpty(t *testing.T) {
-	db := getNewDB(t)
+	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
 	children, err := store.GetChildren(context.Background(), v1.DirectoryID(uuid.New()))

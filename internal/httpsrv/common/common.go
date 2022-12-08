@@ -3,11 +3,15 @@ package common
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/JAORMX/fertilesoil/storage"
 	"github.com/gin-gonic/gin"
+	ginprometheus "github.com/zsais/go-gin-prometheus"
 	"go.infratographer.com/x/ginx"
 	"go.infratographer.com/x/versionx"
 	"go.uber.org/zap"
@@ -22,9 +26,11 @@ type Server struct {
 	L               *zap.Logger
 	debug           bool
 	srv             *http.Server
+	listen          string
+	listenUnix      string
+	shutdownTime    time.Duration
 	version         *versionx.Details
 	readinessChecks map[string]ginx.CheckFunc
-	shutdownTime    time.Duration
 }
 
 func NewServer(
@@ -34,23 +40,62 @@ func NewServer(
 	t storage.DirectoryAdmin,
 	debug bool,
 	shutdownTime time.Duration,
+	unix string,
 ) *Server {
 	srv := &http.Server{
 		Addr: listen,
 	}
 
 	s := &Server{
-		L:            logger,
-		DB:           db,
-		T:            t,
-		debug:        debug,
-		srv:          srv,
-		shutdownTime: shutdownTime,
+		L:               logger,
+		DB:              db,
+		T:               t,
+		debug:           debug,
+		srv:             srv,
+		listen:          listen,
+		listenUnix:      unix,
+		shutdownTime:    shutdownTime,
+		readinessChecks: make(map[string]ginx.CheckFunc),
 	}
 
 	s.AddReadinessCheck("database", s.dbCheck)
 
 	return s
+}
+
+func (s *Server) DefaultEngine(logger *zap.Logger) *gin.Engine {
+	r := ginx.DefaultEngine(logger, defaultEmptyLogFn)
+	p := ginprometheus.NewPrometheus("gin")
+
+	// Remove any params from the URL string to keep the number of labels down
+	p.ReqCntURLLabelMappingFn = func(c *gin.Context) string {
+		return c.FullPath()
+	}
+
+	p.Use(r)
+
+	if s.version != nil {
+		// Version endpoint returns build information
+		r.GET("/version", s.versionHandler)
+	}
+
+	// Health endpoints
+	r.GET("/livez", s.livenessCheckHandler)
+	r.GET("/readyz", s.readinessCheckHandler)
+
+	r.Use(func(c *gin.Context) {
+		u := c.GetHeader("User")
+		if u != "" {
+			c.Set("current_actor", u)
+			c.Set("actor_type", "user")
+		}
+	})
+
+	r.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, gin.H{"message": "invalid request - route not found"})
+	})
+
+	return r
 }
 
 func (s *Server) SetHandler(h http.Handler) {
@@ -63,6 +108,19 @@ func (s *Server) Run(ctx context.Context) error {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	if s.listenUnix != "" {
+		s.L.Info("listening on unix socket", zap.String("socket", s.listenUnix))
+		listener, err := net.Listen("unix", s.listenUnix)
+		if err != nil {
+			return fmt.Errorf("failed to listen on %s: %w", s.listenUnix, err)
+		}
+		defer listener.Close()
+		defer os.Remove(s.listenUnix)
+
+		return s.srv.Serve(listener)
+	}
+
+	s.L.Info("listening on", zap.String("address", s.listen))
 	return s.srv.ListenAndServe()
 }
 
@@ -124,8 +182,4 @@ func (s *Server) versionHandler(c *gin.Context) {
 
 func (s *Server) dbCheck(ctx context.Context) error {
 	return s.DB.PingContext(ctx)
-}
-
-func DefaultEngine(logger *zap.Logger) *gin.Engine {
-	return ginx.DefaultEngine(logger, defaultEmptyLogFn)
 }

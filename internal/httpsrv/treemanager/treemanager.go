@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,9 +22,10 @@ func NewServer(
 	db *sql.DB,
 	debug bool,
 	shutdownTime time.Duration,
+	unix string,
 ) *common.Server {
 	t := driver.NewDirectoryAdminDriver(db)
-	s := common.NewServer(logger, listen, db, t, debug, shutdownTime)
+	s := common.NewServer(logger, listen, db, t, debug, shutdownTime, unix)
 
 	s.SetHandler(newHandler(logger, s))
 
@@ -31,7 +33,7 @@ func NewServer(
 }
 
 func newHandler(logger *zap.Logger, s *common.Server) *gin.Engine {
-	r := common.DefaultEngine(logger)
+	r := s.DefaultEngine(logger)
 
 	r.GET("/api", apiVersionHandler)
 	r.GET("/api/v1", apiVersionHandler)
@@ -68,8 +70,11 @@ func listRoots(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(200, gin.H{
-			"directories": roots,
+		c.JSON(http.StatusOK, &v1.DirectoryList{
+			DirectoryRequestMeta: v1.DirectoryRequestMeta{
+				Version: v1.ApiVersion,
+			},
+			Directories: roots,
 		})
 	}
 }
@@ -93,8 +98,11 @@ func createRootDirectory(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(201, gin.H{
-			"id": rd.ID,
+		c.JSON(http.StatusCreated, &v1.DirectoryFetch{
+			DirectoryRequestMeta: v1.DirectoryRequestMeta{
+				Version: v1.ApiVersion,
+			},
+			Directory: *rd,
 		})
 	}
 }
@@ -109,8 +117,11 @@ func getDirectory(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(200, gin.H{
-			"directories": dir,
+		c.JSON(200, &v1.DirectoryFetch{
+			DirectoryRequestMeta: v1.DirectoryRequestMeta{
+				Version: v1.ApiVersion,
+			},
+			Directory: *dir,
 		})
 	}
 }
@@ -168,8 +179,11 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(201, gin.H{
-			"id": rd.ID,
+		c.JSON(201, &v1.DirectoryFetch{
+			DirectoryRequestMeta: v1.DirectoryRequestMeta{
+				Version: v1.ApiVersion,
+			},
+			Directory: *rd,
 		})
 	}
 }

@@ -3,6 +3,7 @@ module github.com/JAORMX/fertilesoil
 go 1.19
 
 require (
+	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/cockroachdb/cockroach-go/v2 v2.2.19
 	github.com/gin-gonic/gin v1.8.1
 	github.com/google/uuid v1.3.0
@@ -11,6 +12,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.1
+	github.com/zsais/go-gin-prometheus v0.1.0
 	go.infratographer.com/x v0.0.0-20221201150359-af418db1bfc3
 	go.uber.org/zap v1.24.0
 )
@@ -66,7 +68,6 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
-	github.com/zsais/go-gin-prometheus v0.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.36.4 // indirect
 	go.opentelemetry.io/otel v1.11.1 // indirect
 	go.opentelemetry.io/otel/metric v0.33.0 // indirect
