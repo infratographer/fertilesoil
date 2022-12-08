@@ -40,6 +40,8 @@ func withRootDir(t *testing.T, store storage.DirectoryAdmin) *v1.Directory {
 }
 
 func TestCreateAndGetRoot(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -53,6 +55,8 @@ func TestCreateAndGetRoot(t *testing.T) {
 }
 
 func TestListRootOneRoot(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -65,6 +69,8 @@ func TestListRootOneRoot(t *testing.T) {
 }
 
 func TestListMultipleRoots(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -83,6 +89,8 @@ func TestListMultipleRoots(t *testing.T) {
 }
 
 func TestCreateMultipleRoots(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -104,6 +112,8 @@ func TestCreateMultipleRoots(t *testing.T) {
 }
 
 func TestCantCreateRootWithParent(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -118,6 +128,8 @@ func TestCantCreateRootWithParent(t *testing.T) {
 }
 
 func TestCreateAndGetDirectory(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -152,6 +164,8 @@ func TestCreateAndGetDirectory(t *testing.T) {
 }
 
 func TestCreateDirectoryWithParentThatDoesntExist(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -166,6 +180,8 @@ func TestCreateDirectoryWithParentThatDoesntExist(t *testing.T) {
 }
 
 func TestCreateDirectoryWithoutParent(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -179,6 +195,8 @@ func TestCreateDirectoryWithoutParent(t *testing.T) {
 }
 
 func TestQueryUnknownDirectory(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -188,6 +206,8 @@ func TestQueryUnknownDirectory(t *testing.T) {
 }
 
 func TestGetSingleParent(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -209,6 +229,8 @@ func TestGetSingleParent(t *testing.T) {
 }
 
 func TestGetMultipleParents(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -261,6 +283,8 @@ func TestGetMultipleParents(t *testing.T) {
 }
 
 func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -272,6 +296,8 @@ func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
 }
 
 func TestGetParentsFromUnknownShouldFail(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -281,6 +307,8 @@ func TestGetParentsFromUnknownShouldFail(t *testing.T) {
 }
 
 func TestGetChildrenBasic(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -302,6 +330,8 @@ func TestGetChildrenBasic(t *testing.T) {
 }
 
 func TestGetChildrenMultiple(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -351,6 +381,8 @@ func TestGetChildrenMultiple(t *testing.T) {
 }
 
 func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
@@ -362,6 +394,8 @@ func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
 }
 
 func TestGetChildrenFromUnknownReturnsEmpty(t *testing.T) {
+	t.Parallel()
+
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 

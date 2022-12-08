@@ -12,6 +12,8 @@ import (
 )
 
 func TestMigrations(t *testing.T) {
+	t.Parallel()
+
 	ts, crdberr := testserver.NewTestServer()
 	assert.NoError(t, crdberr)
 	defer ts.Stop()
@@ -22,12 +24,6 @@ func TestMigrations(t *testing.T) {
 
 	goose.SetBaseFS(migrations.Migrations)
 	assert.NoError(t, goose.SetDialect(dbdialect), "failed to set dialect")
-
-	t.Run("up", func(t *testing.T) {
-		assert.NoError(t, goose.Up(dbConn, "."), "failed to run migrations")
-	})
-
-	t.Run("down", func(t *testing.T) {
-		assert.NoError(t, goose.Down(dbConn, "."), "failed to run migrations")
-	})
+	assert.NoError(t, goose.Up(dbConn, "."), "failed to run migrations")
+	assert.NoError(t, goose.Down(dbConn, "."), "failed to run migrations")
 }

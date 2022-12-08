@@ -99,6 +99,8 @@ func waitForServer(t *testing.T, cli clientv1.HTTPClient) {
 }
 
 func TestListNoRoots(t *testing.T) {
+	t.Parallel()
+
 	skt := newUnixsocketPath(t)
 	srv := newTestServer(t, skt)
 	defer func() {
@@ -118,6 +120,8 @@ func TestListNoRoots(t *testing.T) {
 }
 
 func TestListOneRoot(t *testing.T) {
+	t.Parallel()
+
 	skt := newUnixsocketPath(t)
 	srv := newTestServer(t, skt)
 	defer func() {
@@ -146,6 +150,8 @@ func TestListOneRoot(t *testing.T) {
 }
 
 func TestListMultipleRoots(t *testing.T) {
+	t.Parallel()
+
 	skt := newUnixsocketPath(t)
 	srv := newTestServer(t, skt)
 	defer func() {
@@ -176,6 +182,8 @@ func TestListMultipleRoots(t *testing.T) {
 }
 
 func TestOneDirectory(t *testing.T) {
+	t.Parallel()
+
 	skt := newUnixsocketPath(t)
 	srv := newTestServer(t, skt)
 	defer func() {
