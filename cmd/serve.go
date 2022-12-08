@@ -51,7 +51,9 @@ func init() {
 
 	// Server flags
 	flags := serveCmd.Flags()
-	flags.Duration("server-shutdown-timeout", defaultServerShutdownTimeout, "Time to wait for the server to shutdown gracefully")
+	flags.Duration("server-shutdown-timeout",
+		defaultServerShutdownTimeout,
+		"Time to wait for the server to shutdown gracefully")
 	viperx.MustBindFlag(v, "server.shutdown", flags.Lookup("server-shutdown-timeout"))
 	flags.String("server-unix-socket", "", "Listen on a unix socket instead of a TCP socket.")
 	viperx.MustBindFlag(v, "server.unix_socket", flags.Lookup("server-unix-socket"))

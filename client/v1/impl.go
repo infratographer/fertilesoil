@@ -50,7 +50,11 @@ type httpClient struct {
 	managerURL *url.URL
 }
 
-func (c *httpClient) CreateDirectory(ctx context.Context, cdr *v1.CreateDirectoryRequest, parent v1.DirectoryID) (*v1.DirectoryFetch, error) {
+func (c *httpClient) CreateDirectory(
+	ctx context.Context,
+	cdr *v1.CreateDirectoryRequest,
+	parent v1.DirectoryID,
+) (*v1.DirectoryFetch, error) {
 	r, err := c.encode(cdr)
 	if err != nil {
 		return nil, err
@@ -80,7 +84,10 @@ func (c *httpClient) CreateDirectory(ctx context.Context, cdr *v1.CreateDirector
 	return &dir, nil
 }
 
-func (c *httpClient) CreateRoot(ctx context.Context, cdr *v1.CreateDirectoryRequest) (*v1.DirectoryFetch, error) {
+func (c *httpClient) CreateRoot(
+	ctx context.Context,
+	cdr *v1.CreateDirectoryRequest,
+) (*v1.DirectoryFetch, error) {
 	r, err := c.encode(cdr)
 	if err != nil {
 		return nil, err
@@ -150,7 +157,12 @@ func (c *httpClient) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.D
 	return &dir, nil
 }
 
-func (c *httpClient) DoRaw(ctx context.Context, method string, path string, data io.Reader) (*http.Response, error) {
+func (c *httpClient) DoRaw(
+	ctx context.Context,
+	method string,
+	path string,
+	data io.Reader,
+) (*http.Response, error) {
 	u := c.managerURL.JoinPath(path)
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), data)
 	if err != nil {
@@ -162,8 +174,8 @@ func (c *httpClient) DoRaw(ctx context.Context, method string, path string, data
 func (c *httpClient) encode(r any) (io.Reader, error) {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
-	err := enc.Encode(r)
-	if err != nil {
+
+	if err := enc.Encode(r); err != nil {
 		return nil, fmt.Errorf("error encoding request: %w", err)
 	}
 	return &buf, nil

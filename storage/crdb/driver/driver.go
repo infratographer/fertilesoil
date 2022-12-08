@@ -163,7 +163,10 @@ SELECT id FROM get_parents`, child)
 	return parents[1:], nil
 }
 
-func (t *Driver) GetParentsUntilAncestor(ctx context.Context, child v1.DirectoryID, ancestor v1.DirectoryID) ([]v1.DirectoryID, error) {
+func (t *Driver) GetParentsUntilAncestor(
+	ctx context.Context,
+	child, ancestor v1.DirectoryID,
+) ([]v1.DirectoryID, error) {
 	var parents []v1.DirectoryID
 
 	// TODO(jaosorior): What's more efficient? A single recursive query or multiple queries?

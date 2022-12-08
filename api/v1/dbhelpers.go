@@ -14,8 +14,8 @@ func (did DirectoryID) Value() (driver.Value, error) {
 
 func (did *DirectoryID) Scan(value interface{}) error {
 	var u uuid.UUID
-	err := u.Scan(value)
-	if err != nil {
+
+	if err := u.Scan(value); err != nil {
 		return err
 	}
 
