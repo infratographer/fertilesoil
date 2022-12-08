@@ -81,7 +81,7 @@ linters:
     - unused
     - wastedassign
     - whitespace
-    # - contextcheck
+    - contextcheck
     # - cyclop
     # - exhaustivestruct
     # - forbidigo
