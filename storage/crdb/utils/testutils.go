@@ -22,7 +22,9 @@ func NewTestDBServer() (*url.URL, func(), error) {
 		return nil, nil, err
 	}
 
-	srv.WaitForInit()
+	if err := srv.WaitForInit(); err != nil {
+		return nil, nil, err
+	}
 
 	dbURL := srv.PGURL()
 

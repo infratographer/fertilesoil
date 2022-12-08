@@ -40,6 +40,7 @@ to quickly create a Cobra application.`,
 	RunE: serverRunE,
 }
 
+//nolint:gochecknoinits // This is encouraged by cobra
 func init() {
 	rootCmd.AddCommand(serveCmd)
 
@@ -58,6 +59,8 @@ func init() {
 
 func serverRunE(cmd *cobra.Command, args []string) error {
 	l := initLogger()
+	//nolint:errcheck // We don't care about the error here.
+	// These logs aren't important enough to fail the program.
 	defer l.Sync()
 
 	// catch SIGTERM and SIGINT
