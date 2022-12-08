@@ -8,3 +8,17 @@ of a tree (a directory structure) which is the basis of a multi-tenant platform.
 
 It provides a tree representation, as well as the backend to store it in a
 database. It also provides an HTTP API to access the tree.
+
+The Tree(s)
+-----------
+
+The overall model is as follows:
+
+![Tree structure overview](/docs/images/trees.jpg)
+
+Since the intent is to build multi-tenant platforms, what is a platform without
+applications?
+
+The intention is to build a bunch of micro-services that would call the tree manager
+to get the tree for a given tenant, and then use that tree to determine what
+to do.
