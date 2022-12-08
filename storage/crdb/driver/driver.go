@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	v1 "github.com/JAORMX/fertilesoil/api/v1"
-	"github.com/JAORMX/fertilesoil/storage"
+	v1 "github.com/infratographer/fertilesoil/api/v1"
+	"github.com/infratographer/fertilesoil/storage"
 )
 
 type Driver struct {

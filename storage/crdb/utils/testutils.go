@@ -13,7 +13,7 @@ import (
 	"github.com/cockroachdb/cockroach-go/v2/testserver"
 	"github.com/pressly/goose/v3"
 
-	"github.com/JAORMX/fertilesoil/storage/crdb/migrations"
+	"github.com/infratographer/fertilesoil/storage/crdb/migrations"
 )
 
 type StopServerFunc func()

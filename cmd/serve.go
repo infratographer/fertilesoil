@@ -18,8 +18,8 @@ import (
 	"go.infratographer.com/x/viperx"
 	"go.uber.org/zap"
 
-	"github.com/JAORMX/fertilesoil/internal/httpsrv/treemanager"
-	dbutils "github.com/JAORMX/fertilesoil/storage/crdb/utils"
+	"github.com/infratographer/fertilesoil/internal/httpsrv/treemanager"
+	dbutils "github.com/infratographer/fertilesoil/storage/crdb/utils"
 )
 
 const (

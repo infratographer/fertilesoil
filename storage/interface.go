@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 
-	v1 "github.com/JAORMX/fertilesoil/api/v1"
+	v1 "github.com/infratographer/fertilesoil/api/v1"
 )
 
 // Reader is the interface that allows doing basic read operations

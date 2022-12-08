@@ -8,10 +8,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	v1 "github.com/JAORMX/fertilesoil/api/v1"
-	"github.com/JAORMX/fertilesoil/storage"
-	"github.com/JAORMX/fertilesoil/storage/crdb/driver"
-	"github.com/JAORMX/fertilesoil/storage/crdb/utils"
+	v1 "github.com/infratographer/fertilesoil/api/v1"
+	"github.com/infratographer/fertilesoil/storage"
+	"github.com/infratographer/fertilesoil/storage/crdb/driver"
+	"github.com/infratographer/fertilesoil/storage/crdb/utils"
 )
 
 var baseDBURL *url.URL

@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/JAORMX/fertilesoil/storage"
+	"github.com/infratographer/fertilesoil/storage"
 )
 
 var defaultEmptyLogFn = func(c *gin.Context) []zapcore.Field { return []zapcore.Field{} }

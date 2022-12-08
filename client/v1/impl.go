@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"net/url"
 
-	v1 "github.com/JAORMX/fertilesoil/api/v1"
+	v1 "github.com/infratographer/fertilesoil/api/v1"
 )
 
 func newFullHTTPClient(cfg *ClientConfig) HTTPRootClient {

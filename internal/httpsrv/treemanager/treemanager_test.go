@@ -13,11 +13,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	apiv1 "github.com/JAORMX/fertilesoil/api/v1"
-	clientv1 "github.com/JAORMX/fertilesoil/client/v1"
-	"github.com/JAORMX/fertilesoil/internal/httpsrv/common"
-	"github.com/JAORMX/fertilesoil/internal/httpsrv/treemanager"
-	dbutils "github.com/JAORMX/fertilesoil/storage/crdb/utils"
+	apiv1 "github.com/infratographer/fertilesoil/api/v1"
+	clientv1 "github.com/infratographer/fertilesoil/client/v1"
+	"github.com/infratographer/fertilesoil/internal/httpsrv/common"
+	"github.com/infratographer/fertilesoil/internal/httpsrv/treemanager"
+	dbutils "github.com/infratographer/fertilesoil/storage/crdb/utils"
 )
 
 const (

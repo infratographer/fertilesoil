@@ -1,4 +1,4 @@
-module github.com/JAORMX/fertilesoil
+module github.com/infratographer/fertilesoil
 
 go 1.19
 

@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	v1 "github.com/JAORMX/fertilesoil/api/v1"
+	v1 "github.com/infratographer/fertilesoil/api/v1"
 )
 
 type Client interface {

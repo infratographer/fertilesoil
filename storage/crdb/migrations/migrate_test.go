@@ -8,7 +8,7 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/JAORMX/fertilesoil/storage/crdb/migrations"
+	"github.com/infratographer/fertilesoil/storage/crdb/migrations"
 )
 
 func TestMigrations(t *testing.T) {

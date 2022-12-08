@@ -10,10 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	v1 "github.com/JAORMX/fertilesoil/api/v1"
-	"github.com/JAORMX/fertilesoil/internal/httpsrv/common"
-	"github.com/JAORMX/fertilesoil/storage"
-	"github.com/JAORMX/fertilesoil/storage/crdb/driver"
+	v1 "github.com/infratographer/fertilesoil/api/v1"
+	"github.com/infratographer/fertilesoil/internal/httpsrv/common"
+	"github.com/infratographer/fertilesoil/storage"
+	"github.com/infratographer/fertilesoil/storage/crdb/driver"
 )
 
 func NewServer(
