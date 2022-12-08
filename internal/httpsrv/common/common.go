@@ -9,13 +9,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/JAORMX/fertilesoil/storage"
 	"github.com/gin-gonic/gin"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 	"go.infratographer.com/x/ginx"
 	"go.infratographer.com/x/versionx"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/JAORMX/fertilesoil/storage"
 )
 
 var defaultEmptyLogFn = func(c *gin.Context) []zapcore.Field { return []zapcore.Field{} }
@@ -102,7 +103,7 @@ func (s *Server) SetHandler(h http.Handler) {
 	s.srv.Handler = h
 }
 
-// Run will start the server
+// Run will start the server.
 func (s *Server) Run(ctx context.Context) error {
 	if !s.debug {
 		gin.SetMode(gin.ReleaseMode)
@@ -124,7 +125,7 @@ func (s *Server) Run(ctx context.Context) error {
 	return s.srv.ListenAndServe()
 }
 
-// Shutdown will gracefully shutdown the server
+// Shutdown will gracefully shutdown the server.
 func (s *Server) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), s.shutdownTime)
 	defer cancel()
@@ -135,14 +136,14 @@ func (s *Server) Shutdown() error {
 // AddReadinessCheck will accept a function to be ran during calls to /readyx.
 // These functions should accept a context and only return an error. When adding
 // a readiness check a name is also provided, this name will be used when returning
-// the state of all the checks
+// the state of all the checks.
 func (s Server) AddReadinessCheck(name string, f ginx.CheckFunc) Server {
 	s.readinessChecks[name] = f
 
 	return s
 }
 
-// livenessCheckHandler ensures that the server is up and responding
+// livenessCheckHandler ensures that the server is up and responding.
 func (s *Server) livenessCheckHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": "UP",

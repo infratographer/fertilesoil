@@ -22,12 +22,12 @@ type RootReader interface {
 	ListRoots(ctx context.Context) ([]v1.DirectoryID, error)
 }
 
-// Writer is the interface that allows doing basic write operations
+// Writer is the interface that allows doing basic write operations.
 type Writer interface {
 	CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Directory, error)
 }
 
-// RootWriter is the interface that allows doing all write operations
+// RootWriter is the interface that allows doing all write operations.
 type RootWriter interface {
 	Writer
 	CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory, error)

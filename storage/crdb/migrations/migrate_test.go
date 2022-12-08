@@ -4,10 +4,11 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/JAORMX/fertilesoil/storage/crdb/migrations"
 	"github.com/cockroachdb/cockroach-go/v2/testserver"
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/JAORMX/fertilesoil/storage/crdb/migrations"
 )
 
 func TestMigrations(t *testing.T) {

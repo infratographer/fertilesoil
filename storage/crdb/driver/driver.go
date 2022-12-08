@@ -111,7 +111,7 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 }
 
 // GetDirectoryByID returns a directory by its ID.
-// Note that this call does not give out parent information
+// Note that this call does not give out parent information.
 func (t *Driver) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.Directory, error) {
 	var d v1.Directory
 	err := t.db.QueryRowContext(ctx,
@@ -177,7 +177,6 @@ func (t *Driver) GetParentsUntilAncestor(ctx context.Context, child v1.Directory
 	INNER JOIN get_parents gp ON d.id = gp.parent_id
 	WHERE gp.id != $2
 ) SELECT id FROM get_parents`, child, ancestor)
-
 	if err != nil {
 		return nil, fmt.Errorf("error querying directory: %w", err)
 	}

@@ -14,9 +14,7 @@ import (
 	"github.com/JAORMX/fertilesoil/storage/crdb/utils"
 )
 
-var (
-	baseDBURL *url.URL
-)
+var baseDBURL *url.URL
 
 func TestMain(m *testing.M) {
 	var stop func()

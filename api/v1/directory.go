@@ -9,9 +9,7 @@ import (
 
 const ApiVersion = "v1"
 
-var (
-	ErrParsingID = errors.New("error parsing id")
-)
+var ErrParsingID = errors.New("error parsing id")
 
 type Directory struct {
 	ID        DirectoryID       `json:"id"`

@@ -27,7 +27,7 @@ const (
 	defaultServerShutdownTimeout = 5 * time.Second
 )
 
-// serveCmd represents the treemanager command
+// serveCmd represents the treemanager command.
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "A brief description of your command",
