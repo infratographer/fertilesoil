@@ -84,7 +84,7 @@ linters:
     - contextcheck
     - cyclop
     # - exhaustivestruct
-    # - forbidigo
+    - forbidigo
     # - funlen
     # - gochecknoglobals
     # - ireturn
