@@ -16,7 +16,9 @@ import (
 	"github.com/JAORMX/fertilesoil/storage/crdb/migrations"
 )
 
-func NewTestDBServer() (*url.URL, func(), error) {
+type StopServerFunc func()
+
+func NewTestDBServer() (*url.URL, StopServerFunc, error) {
 	srv, err := testserver.NewTestServer()
 	if err != nil {
 		return nil, nil, err
@@ -36,7 +38,7 @@ func NewTestDBServer() (*url.URL, func(), error) {
 	}, nil
 }
 
-func NewTestDBServerOrDie() (*url.URL, func()) {
+func NewTestDBServerOrDie() (*url.URL, StopServerFunc) {
 	dbURL, cleanup, err := NewTestDBServer()
 	if err != nil {
 		panic(fmt.Sprintf("error creating test database server: %v", err))
