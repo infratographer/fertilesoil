@@ -25,6 +25,8 @@ func TestMain(m *testing.M) {
 }
 
 func withRootDir(t *testing.T, store storage.DirectoryAdmin) *v1.Directory {
+	t.Helper()
+
 	d := &v1.Directory{
 		Name: "root",
 	}
