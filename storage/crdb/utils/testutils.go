@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/cockroachdb/cockroach-go/v2/testserver"
@@ -17,6 +18,8 @@ import (
 )
 
 type StopServerFunc func()
+
+var once sync.Once
 
 func NewTestDBServer() (*url.URL, StopServerFunc, error) {
 	srv, err := testserver.NewTestServer()
@@ -66,10 +69,13 @@ func GetNewTestDB(t *testing.T, baseDBURL *url.URL) *sql.DB {
 		t.Fatalf("error opening database: %v", err)
 	}
 
-	goose.SetBaseFS(migrations.Migrations)
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("error setting dialect: %v", err)
-	}
+	once.Do(func() {
+		goose.SetBaseFS(migrations.Migrations)
+
+		if err := goose.SetDialect("postgres"); err != nil {
+			t.Fatalf("error setting dialect: %v", err)
+		}
+	})
 
 	if err := goose.Up(dbConn, "."); err != nil {
 		t.Fatalf("error running migrations: %v", err)
