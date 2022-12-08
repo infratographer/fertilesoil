@@ -28,10 +28,10 @@ const (
 
 var (
 	baseDBURL         *url.URL
-	baseServerAddress = mustParseUrl("http://" + srvhost)
+	baseServerAddress = mustParseURL("http://" + srvhost)
 )
 
-func mustParseUrl(u string) *url.URL {
+func mustParseURL(u string) *url.URL {
 	parsed, err := url.Parse(u)
 	if err != nil {
 		panic(err)
@@ -133,7 +133,7 @@ func TestListOneRoot(t *testing.T) {
 
 	_, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
 		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.ApiVersion,
+			Version: apiv1.APIVersion,
 		},
 		Name: "root",
 	})
@@ -163,7 +163,7 @@ func TestListMultipleRoots(t *testing.T) {
 	for idx := 0; idx < nroots; idx++ {
 		_, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
 			DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-				Version: apiv1.ApiVersion,
+				Version: apiv1.APIVersion,
 			},
 			Name: fmt.Sprintf("root%d", idx),
 		})
@@ -191,7 +191,7 @@ func TestOneDirectory(t *testing.T) {
 
 	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
 		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.ApiVersion,
+			Version: apiv1.APIVersion,
 		},
 		Name: "root",
 	})
@@ -199,7 +199,7 @@ func TestOneDirectory(t *testing.T) {
 
 	dir, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
 		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.ApiVersion,
+			Version: apiv1.APIVersion,
 		},
 		Name: "dir",
 	},

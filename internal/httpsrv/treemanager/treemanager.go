@@ -72,7 +72,7 @@ func listRoots(s *common.Server) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, &v1.DirectoryList{
 			DirectoryRequestMeta: v1.DirectoryRequestMeta{
-				Version: v1.ApiVersion,
+				Version: v1.APIVersion,
 			},
 			Directories: roots,
 		})
@@ -100,7 +100,7 @@ func createRootDirectory(s *common.Server) gin.HandlerFunc {
 
 		c.JSON(http.StatusCreated, &v1.DirectoryFetch{
 			DirectoryRequestMeta: v1.DirectoryRequestMeta{
-				Version: v1.ApiVersion,
+				Version: v1.APIVersion,
 			},
 			Directory: *rd,
 		})
@@ -119,7 +119,7 @@ func getDirectory(s *common.Server) gin.HandlerFunc {
 
 		c.JSON(200, &v1.DirectoryFetch{
 			DirectoryRequestMeta: v1.DirectoryRequestMeta{
-				Version: v1.ApiVersion,
+				Version: v1.APIVersion,
 			},
 			Directory: *dir,
 		})
@@ -181,7 +181,7 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 
 		c.JSON(201, &v1.DirectoryFetch{
 			DirectoryRequestMeta: v1.DirectoryRequestMeta{
-				Version: v1.ApiVersion,
+				Version: v1.APIVersion,
 			},
 			Directory: *rd,
 		})

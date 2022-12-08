@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const ApiVersion = "v1"
+const APIVersion = "v1"
 
 var ErrParsingID = errors.New("error parsing id")
 
