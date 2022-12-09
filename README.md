@@ -17,8 +17,10 @@ The overall model is as follows:
 ![Tree structure overview](/docs/images/trees.jpg)
 
 Since the intent is to build multi-tenant platforms, what is a platform without
-applications?
+applications? In this model, everything is scoped to the tree, and thus
+applications are meant to be scoped to specific nodes.
 
 The intention is to build a bunch of micro-services that would call the tree manager
 to get the tree for a given tenant, and then use that tree to determine what
 to do.
+
