@@ -12,6 +12,7 @@ type Client interface {
 	CreateDirectory(c context.Context, r *v1.CreateDirectoryRequest, parent v1.DirectoryID) (*v1.DirectoryFetch, error)
 	GetDirectory(c context.Context, id v1.DirectoryID) (*v1.DirectoryFetch, error)
 	GetParents(c context.Context, id v1.DirectoryID) (*v1.DirectoryList, error)
+	GetParentsUntil(c context.Context, id v1.DirectoryID, until v1.DirectoryID) (*v1.DirectoryList, error)
 	GetChildren(c context.Context, id v1.DirectoryID) (*v1.DirectoryList, error)
 }
 

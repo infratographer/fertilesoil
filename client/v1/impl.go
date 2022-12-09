@@ -158,9 +158,32 @@ func (c *httpClient) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.D
 }
 
 func (c *httpClient) GetParents(ctx context.Context, id v1.DirectoryID) (*v1.DirectoryList, error) {
+	return c.doGetParents(ctx, id, nil)
+}
+
+func (c *httpClient) GetParentsUntil(
+	ctx context.Context,
+	id v1.DirectoryID,
+	until v1.DirectoryID,
+) (*v1.DirectoryList, error) {
+	return c.doGetParents(ctx, id, &until)
+}
+
+func (c *httpClient) doGetParents(
+	ctx context.Context,
+	id v1.DirectoryID,
+	until *v1.DirectoryID,
+) (*v1.DirectoryList, error) {
 	path, err := url.JoinPath("/api/v1/directories", id.String(), "parents")
 	if err != nil {
 		return nil, fmt.Errorf("error getting parents: %w", err)
+	}
+
+	if until != nil {
+		path, err = url.JoinPath(path, until.String())
+		if err != nil {
+			return nil, fmt.Errorf("error getting parents: %w", err)
+		}
 	}
 
 	resp, err := c.DoRaw(ctx, http.MethodGet, path, nil)

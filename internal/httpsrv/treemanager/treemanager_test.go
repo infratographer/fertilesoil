@@ -20,7 +20,6 @@ import (
 	"go.uber.org/zap"
 
 	apiv1 "github.com/infratographer/fertilesoil/api/v1"
-	v1 "github.com/infratographer/fertilesoil/api/v1"
 	clientv1 "github.com/infratographer/fertilesoil/client/v1"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/common"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/treemanager"
@@ -359,6 +358,12 @@ func TestFullTree(t *testing.T) {
 	assert.Contains(t, dir2children.Directories, dir3.Directory.ID, "dir2 did not contain dir3 as child")
 	assert.Contains(t, dir2children.Directories, dir4.Directory.ID, "dir2 did not contain dir4 as child")
 	assert.Contains(t, dir2children.Directories, dir5.Directory.ID, "dir2 did not contain dir5 as child")
+
+	parentsUntil, err := cli.GetParentsUntil(context.Background(), dir5.Directory.ID, dir2.Directory.ID)
+	assert.NoError(t, err, "error getting parents")
+	assert.Equal(t, 2, len(parentsUntil.Directories), "unexpected number of parents")
+	assert.Equal(t, dir3.Directory.ID, parentsUntil.Directories[0], "unexpected parent name")
+	assert.Equal(t, dir2.Directory.ID, parentsUntil.Directories[1], "unexpected parent name")
 }
 
 func TestCreateRootWithMalformedData(t *testing.T) {
@@ -457,17 +462,21 @@ func TestServerWithBadDB(t *testing.T) {
 			Version: apiv1.APIVersion,
 		},
 		Name: "dir",
-	}, v1.DirectoryID(uuid.New()))
+	}, apiv1.DirectoryID(uuid.New()))
 	assert.Error(t, err, "expected error creating directory")
 
-	_, err = cli.GetDirectory(context.Background(), v1.DirectoryID(uuid.New()))
+	_, err = cli.GetDirectory(context.Background(), apiv1.DirectoryID(uuid.New()))
 	assert.Error(t, err, "expected error getting directory")
 
-	_, err = cli.GetChildren(context.Background(), v1.DirectoryID(uuid.New()))
+	_, err = cli.GetChildren(context.Background(), apiv1.DirectoryID(uuid.New()))
 	assert.Error(t, err, "expected error getting children")
 
-	_, err = cli.GetParents(context.Background(), v1.DirectoryID(uuid.New()))
+	_, err = cli.GetParents(context.Background(), apiv1.DirectoryID(uuid.New()))
 	assert.Error(t, err, "expected error getting parents")
+
+	_, err = cli.GetParentsUntil(context.Background(),
+		apiv1.DirectoryID(uuid.New()), apiv1.DirectoryID(uuid.New()))
+	assert.Error(t, err, "expected error getting parents until")
 }
 
 func TestInvalidDirectoryIDs(t *testing.T) {
@@ -493,17 +502,46 @@ func TestInvalidDirectoryIDs(t *testing.T) {
 		},
 		Name: "root",
 	})
+	assert.NoError(t, err, "error creating root directory")
 
 	// Create a child directory
-	_, err = cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
+	child, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
 		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
 			Version: apiv1.APIVersion,
 		},
 		Name: "child",
 	}, root.Directory.ID)
+	assert.NoError(t, err, "error creating child directory")
 
 	// some string
 	resp, err := cli.DoRaw(context.Background(), http.MethodGet, "/api/v1/directories/invalid", nil)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// some string getting children
+	resp, err = cli.DoRaw(context.Background(), http.MethodGet, "/api/v1/directories/invalid/children", nil)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// some string getting parents
+	resp, err = cli.DoRaw(context.Background(), http.MethodGet, "/api/v1/directories/invalid/parents", nil)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// some string getting parents until
+	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
+		"/api/v1/directories/invalid/parents/00000000-0000-0000-0000-000000000000", nil)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// a valid child with an invalid parent
+	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
+		fmt.Sprintf("/api/v1/directories/%s/parents/invalid", child.Directory.ID),
+		nil)
 	assert.NoError(t, err, "error sending request")
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
 	resp.Body.Close()
