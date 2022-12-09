@@ -3,6 +3,7 @@ package treemanager_test
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -13,10 +14,12 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
 	apiv1 "github.com/infratographer/fertilesoil/api/v1"
+	v1 "github.com/infratographer/fertilesoil/api/v1"
 	clientv1 "github.com/infratographer/fertilesoil/client/v1"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/common"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/treemanager"
@@ -409,4 +412,59 @@ func TestCreateRootWithMalformedData(t *testing.T) {
 	assert.NoError(t, err, "error sending request")
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
 	resp.Body.Close()
+}
+
+func TestServerWithBadDB(t *testing.T) {
+	t.Parallel()
+
+	skt := newUnixsocketPath(t)
+
+	tl, err := zap.NewDevelopment()
+	assert.NoError(t, err, "error creating logger")
+
+	// We're opening a valid database connection, but there's not database set.
+	dbconn, err := sql.Open("postgres", baseDBURL.String())
+	assert.NoError(t, err, "error creating db connection")
+
+	srv := treemanager.NewServer(tl, srvhost, dbconn, debug, defaultShutdownTime, skt)
+
+	defer func() {
+		err := srv.Shutdown()
+		assert.NoError(t, err, "error shutting down server")
+	}()
+
+	go runTestServer(t, srv)
+
+	cli := newTestClient(t, skt)
+
+	t.Log("waiting for server to start. This uses a timer as the database is not set up.")
+	time.Sleep(1 * time.Second)
+
+	_, err = cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
+		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
+			Version: apiv1.APIVersion,
+		},
+		Name: "root",
+	})
+	assert.Error(t, err, "expected error creating root")
+
+	_, err = cli.ListRoots(context.Background())
+	assert.Error(t, err, "expected error getting roots")
+
+	_, err = cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
+		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
+			Version: apiv1.APIVersion,
+		},
+		Name: "dir",
+	}, v1.DirectoryID(uuid.New()))
+	assert.Error(t, err, "expected error creating directory")
+
+	_, err = cli.GetDirectory(context.Background(), v1.DirectoryID(uuid.New()))
+	assert.Error(t, err, "expected error getting directory")
+
+	_, err = cli.GetChildren(context.Background(), v1.DirectoryID(uuid.New()))
+	assert.Error(t, err, "expected error getting children")
+
+	_, err = cli.GetParents(context.Background(), v1.DirectoryID(uuid.New()))
+	assert.Error(t, err, "expected error getting parents")
 }
