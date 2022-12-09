@@ -22,7 +22,7 @@ type Directory struct {
 	// Parent is the parent directory.
 	// The visibility of this structure depends on the query.
 	// Full tree queries are normally not allowed.
-	Parent *Directory
+	Parent *DirectoryID `json:"parent,omitempty"`
 }
 
 type DirectoryID uuid.UUID

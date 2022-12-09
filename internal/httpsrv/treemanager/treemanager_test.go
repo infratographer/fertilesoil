@@ -147,10 +147,15 @@ func TestListOneRoot(t *testing.T) {
 
 	assert.NoError(t, err, "error creating root")
 
+	// Ensure root parent is empty
+	assert.Nil(t, rd.Directory.Parent, "unexpected parent")
+
+	// Ensure root is returned in list
 	rl, err := cli.ListRoots(context.Background())
 	assert.NoError(t, err, "error getting roots")
 	assert.Equal(t, 1, len(rl.Directories), "unexpected number of directories")
 
+	// Ensure GetParents call returns empty list
 	parents, err := cli.GetParents(context.Background(), rd.Directory.ID)
 	assert.NoError(t, err, "error getting parents")
 	assert.Equal(t, 0, len(parents.Directories), "unexpected number of parents")
@@ -183,6 +188,7 @@ func TestListMultipleRoots(t *testing.T) {
 		assert.NoError(t, err, "error creating root")
 	}
 
+	// Ensure ListRoots returns all roots
 	rl, err := cli.ListRoots(context.Background())
 	assert.NoError(t, err, "error getting roots")
 	assert.Equal(t, nroots, len(rl.Directories), "unexpected number of directories")
@@ -223,10 +229,16 @@ func TestOneDirectory(t *testing.T) {
 
 	assert.NoError(t, err, "error creating directory")
 	assert.Equal(t, "dir", dir.Directory.Name, "unexpected directory name")
+	// Ensure parent info is set
+	assert.NotNil(t, dir.Directory.Parent, "expected parent")
+	assert.Equal(t, rd.Directory.ID, *dir.Directory.Parent, "unexpected parent")
 
 	retd, err := cli.GetDirectory(context.Background(), dir.Directory.ID)
 	assert.NoError(t, err, "error getting directory")
 	assert.Equal(t, "dir", retd.Directory.Name, "unexpected directory name")
+	// Ensure parent info is set
+	assert.NotNil(t, dir.Directory.Parent, "expected parent")
+	assert.Equal(t, rd.Directory.ID, *retd.Directory.Parent, "unexpected parent")
 
 	parents, err := cli.GetParents(context.Background(), dir.Directory.ID)
 	assert.NoError(t, err, "error getting parents")

@@ -159,10 +159,11 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
+		parentID := parent.ID
 		d := v1.Directory{
 			Name:     req.Name,
 			Metadata: req.Metadata,
-			Parent:   parent,
+			Parent:   &parentID,
 		}
 
 		rd, err := s.T.CreateDirectory(c, &d)

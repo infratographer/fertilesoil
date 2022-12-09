@@ -117,9 +117,10 @@ func TestCantCreateRootWithParent(t *testing.T) {
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
+	randomPID := v1.DirectoryID(uuid.New())
 	d := &v1.Directory{
 		Name:   "root",
-		Parent: &v1.Directory{},
+		Parent: &randomPID,
 	}
 
 	rd, err := store.CreateRoot(context.Background(), d)
@@ -137,14 +138,14 @@ func TestCreateAndGetDirectory(t *testing.T) {
 
 	d := &v1.Directory{
 		Name:   "testdir",
-		Parent: rootdir,
+		Parent: &rootdir.ID,
 	}
 
 	rd, err := store.CreateDirectory(context.Background(), d)
 	assert.NoError(t, err, "error creating directory")
 	assert.NotNil(t, rd.Metadata, "metadata should not be nil")
 	assert.Equal(t, d.Name, rd.Name, "name should match")
-	assert.Equal(t, d.Parent.ID, rd.Parent.ID, "parent id should match")
+	assert.Equal(t, d.Parent, rd.Parent, "parent id should match")
 
 	// retrieve from db
 	querydir, qerr := store.GetDirectory(context.Background(), rd.ID)
@@ -169,9 +170,10 @@ func TestCreateDirectoryWithParentThatDoesntExist(t *testing.T) {
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryAdminDriver(db)
 
+	pid := v1.DirectoryID(uuid.New())
 	d := &v1.Directory{
 		Name:   "testdir",
-		Parent: &v1.Directory{ID: v1.DirectoryID(uuid.New())},
+		Parent: &pid,
 	}
 
 	rd, err := store.CreateDirectory(context.Background(), d)
@@ -215,7 +217,7 @@ func TestGetSingleParent(t *testing.T) {
 
 	d := &v1.Directory{
 		Name:   "testdir",
-		Parent: rootdir,
+		Parent: &rootdir.ID,
 	}
 
 	rd, err := store.CreateDirectory(context.Background(), d)
@@ -238,19 +240,19 @@ func TestGetMultipleParents(t *testing.T) {
 
 	d1 := &v1.Directory{
 		Name:   "testdir1",
-		Parent: rootdir,
+		Parent: &rootdir.ID,
 	}
 	d2 := &v1.Directory{
 		Name:   "testdir2",
-		Parent: d1,
+		Parent: &d1.ID,
 	}
 	d3 := &v1.Directory{
 		Name:   "testdir3",
-		Parent: d2,
+		Parent: &d2.ID,
 	}
 	d4 := &v1.Directory{
 		Name:   "testdir4",
-		Parent: d3,
+		Parent: &d3.ID,
 	}
 
 	rd1, err := store.CreateDirectory(context.Background(), d1)
@@ -316,7 +318,7 @@ func TestGetChildrenBasic(t *testing.T) {
 
 	d := &v1.Directory{
 		Name:   "testdir",
-		Parent: rootdir,
+		Parent: &rootdir.ID,
 	}
 
 	rd, err := store.CreateDirectory(context.Background(), d)
@@ -339,22 +341,22 @@ func TestGetChildrenMultiple(t *testing.T) {
 
 	d1 := &v1.Directory{
 		Name:   "testdir1",
-		Parent: rootdir,
+		Parent: &rootdir.ID,
 	}
 
 	d2 := &v1.Directory{
 		Name:   "testdir2",
-		Parent: rootdir,
+		Parent: &rootdir.ID,
 	}
 
 	d3 := &v1.Directory{
 		Name:   "testdir3",
-		Parent: rootdir,
+		Parent: &rootdir.ID,
 	}
 
 	d4 := &v1.Directory{
 		Name:   "testdir4",
-		Parent: d1,
+		Parent: &d1.ID,
 	}
 
 	rd1, err := store.CreateDirectory(context.Background(), d1)

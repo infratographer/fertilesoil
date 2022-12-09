@@ -102,7 +102,7 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 
 	err := t.db.QueryRowContext(ctx,
 		"INSERT INTO directories (name, parent_id, metadata) VALUES ($1, $2, $3) RETURNING id, created_at, updated_at",
-		d.Name, d.Parent.ID, d.Metadata).Scan(&d.ID, &d.CreatedAt, &d.UpdatedAt)
+		d.Name, d.Parent, d.Metadata).Scan(&d.ID, &d.CreatedAt, &d.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error inserting directory: %w", err)
 	}
@@ -115,8 +115,8 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 func (t *Driver) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.Directory, error) {
 	var d v1.Directory
 	err := t.db.QueryRowContext(ctx,
-		"SELECT id, name, metadata, created_at, updated_at FROM directories WHERE id = $1",
-		id).Scan(&d.ID, &d.Name, &d.Metadata, &d.CreatedAt, &d.UpdatedAt)
+		"SELECT id, name, metadata, created_at, updated_at, parent_id FROM directories WHERE id = $1",
+		id).Scan(&d.ID, &d.Name, &d.Metadata, &d.CreatedAt, &d.UpdatedAt, &d.Parent)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, storage.ErrDirectoryNotFound
