@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -467,4 +468,72 @@ func TestServerWithBadDB(t *testing.T) {
 
 	_, err = cli.GetParents(context.Background(), v1.DirectoryID(uuid.New()))
 	assert.Error(t, err, "expected error getting parents")
+}
+
+func TestInvalidDirectoryIDs(t *testing.T) {
+	t.Parallel()
+
+	skt := newUnixsocketPath(t)
+	srv := newTestServer(t, skt)
+	defer func() {
+		err := srv.Shutdown()
+		assert.NoError(t, err, "error shutting down server")
+	}()
+
+	go runTestServer(t, srv)
+
+	cli := newTestClient(t, skt)
+
+	waitForServer(t, cli)
+
+	// Create a root directory
+	root, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
+		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
+			Version: apiv1.APIVersion,
+		},
+		Name: "root",
+	})
+
+	// Create a child directory
+	_, err = cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
+		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
+			Version: apiv1.APIVersion,
+		},
+		Name: "child",
+	}, root.Directory.ID)
+
+	// some string
+	resp, err := cli.DoRaw(context.Background(), http.MethodGet, "/api/v1/directories/invalid", nil)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// almost valid UUID
+	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
+		"/api/v1/directories/00000000-0000-0000-0000-00000000XXX/children", nil)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// crazy long string
+	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
+		fmt.Sprintf("/api/v1/directories/%s/children", strings.Repeat("a", 1000)), nil)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// SQL injection through DirectoryID
+	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
+		"/api/v1/directories/00000000-0000-0000-0000-000000000000; DROP TABLE directories", nil)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// SQL injection through DirectoryID (using valid root ID)
+	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
+		fmt.Sprintf("/api/v1/directories/%s; DROP TABLE directories", root.Directory.ID),
+		nil)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
 }
