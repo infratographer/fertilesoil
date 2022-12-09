@@ -167,12 +167,7 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 		}
 
 		rd, err := s.T.CreateDirectory(c, &d)
-		if errors.Is(err, storage.ErrDirectoryWithoutParent) {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "directory must have a parent directory",
-			})
-			return
-		} else if err != nil {
+		if err != nil {
 			s.L.Error("error creating directory", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "internal server error",

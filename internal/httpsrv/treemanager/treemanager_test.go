@@ -575,3 +575,85 @@ func TestInvalidDirectoryIDs(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
 	resp.Body.Close()
 }
+
+func TestCreateErroneousDirectory(t *testing.T) {
+	t.Parallel()
+
+	skt := newUnixsocketPath(t)
+	srv := newTestServer(t, skt)
+	defer func() {
+		err := srv.Shutdown()
+		assert.NoError(t, err, "error shutting down server")
+	}()
+
+	go runTestServer(t, srv)
+
+	cli := newTestClient(t, skt)
+
+	waitForServer(t, cli)
+
+	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
+		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
+			Version: apiv1.APIVersion,
+		},
+		Name: "root",
+	})
+	assert.NoError(t, err, "error creating root")
+
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+
+	err = enc.Encode(&apiv1.CreateDirectoryRequest{
+		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
+			Version: apiv1.APIVersion,
+		},
+		Name: "child",
+	})
+	assert.NoError(t, err, "error encoding data")
+
+	// Creating directory with invalid parent
+	resp, err := cli.DoRaw(context.Background(), http.MethodPost,
+		"/api/v1/directories/invalid", &buf)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// creating directory with null request
+	resp, err = cli.DoRaw(context.Background(), http.MethodPost,
+		fmt.Sprintf("/api/v1/directories/%s", rd.Directory.ID), nil)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// creating directory with invalid request
+	resp, err = cli.DoRaw(context.Background(), http.MethodPost,
+		fmt.Sprintf("/api/v1/directories/%s", rd.Directory.ID), bytes.NewBufferString("invalid"))
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// creating directory with invalid request (no name)
+	buf.Reset()
+	err = enc.Encode(&apiv1.CreateDirectoryRequest{
+		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
+			Version: apiv1.APIVersion,
+		},
+	})
+	assert.NoError(t, err, "error encoding data")
+	resp, err = cli.DoRaw(context.Background(), http.MethodPost,
+		fmt.Sprintf("/api/v1/directories/%s", rd.Directory.ID), &buf)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// creating directory with parent that doesn't exist
+	nodir, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
+		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
+			Version: apiv1.APIVersion,
+		},
+		Name: "nodir",
+	}, apiv1.DirectoryID(uuid.New()))
+	assert.Error(t, err, "should have errored creating directory")
+	assert.Nil(t, nodir, "directory should be nil")
+
+}
