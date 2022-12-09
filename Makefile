@@ -4,6 +4,16 @@ BIN?=treeman
 TOOLS_DIR := .tools
 GOLANGCI_LINT_VERSION = v1.50.1
 
+# Container build settings
+CONTAINER_BUILD_CMD?=docker build
+
+# Container settings
+CONTAINER_REPO?=ghcr.io/infratographer/fertilesoil
+TREEMAN_CONTAINER_IMAGE_NAME = $(CONTAINER_REPO)/treeman
+CONTAINER_TAG?=latest
+
+## Targets
+
 .PHONY: build
 build:
 	go build -o $(BIN) ./main.go
@@ -35,6 +45,11 @@ clean:
 vendor:
 	@go mod download
 	@go mod tidy
+
+image: treeman-image
+
+treeman-image:
+	$(CONTAINER_BUILD_CMD) -f images/treeman/Dockerfile . -t $(TREEMAN_CONTAINER_IMAGE_NAME):$(CONTAINER_TAG)
 
 # Tools setup
 $(TOOLS_DIR):

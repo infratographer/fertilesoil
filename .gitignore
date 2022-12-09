@@ -1,4 +1,4 @@
-.vscode
-treeman
+.vscode/
+/treeman
 .tools/
 coverage.out
