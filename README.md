@@ -35,3 +35,35 @@ The intention is to build a bunch of micro-services that would call the tree man
 to get the tree for a given tenant, and then use that tree to determine what
 to do.
 
+Components
+----------
+
+### API
+
+The API defines the structures that both the client, server and storage system use.
+
+In order to accommodate to changing requirements and needs, the API is kept simple
+and only defines the structures that are needed to build the platform.
+
+The main structures are located in [`api/v1/directory.go`](api/v1/directory.go)
+
+### Storage System
+
+The storage system contains the implementation details of how the tree is stored
+in the database.
+
+Currently, the only implementation is using CockroachDB, but the intention is to
+allow for other implementations to be used.
+
+Any storage implementation needs to implement the [`storage.Storage`](storage/interface.go) interface.
+
+Since the access pattern is read-heavy, the storage system needs to be optimized for that.
+
+### Tree Manager
+
+A sample server implementation is provided in as the `treeman` command that's built
+as part of this project.
+
+### Tree Client
+
+A client library that can be used to access the tree manager [is provided](client/v1).
