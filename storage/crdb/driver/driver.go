@@ -11,24 +11,21 @@ import (
 )
 
 type Driver struct {
-	db         *sql.DB
-	readonly   bool
-	rootaccess bool
+	db       *sql.DB
+	readonly bool
 }
 
 func NewDirectoryAdminDriver(db *sql.DB) storage.DirectoryAdmin {
 	return &Driver{
-		db:         db,
-		readonly:   false,
-		rootaccess: true,
+		db:       db,
+		readonly: false,
 	}
 }
 
 func NewDirectoryReaderDriver(db *sql.DB) storage.Reader {
 	return &Driver{
-		db:         db,
-		readonly:   true,
-		rootaccess: false,
+		db:       db,
+		readonly: true,
 	}
 }
 
@@ -38,10 +35,6 @@ func NewDirectoryReaderDriver(db *sql.DB) storage.Reader {
 func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory, error) {
 	if t.readonly {
 		return nil, storage.ErrReadOnly
-	}
-
-	if !t.rootaccess {
-		return nil, storage.ErrNoRootAccess
 	}
 
 	if d.Parent != nil {
@@ -63,10 +56,6 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 }
 
 func (t *Driver) ListRoots(ctx context.Context) ([]v1.DirectoryID, error) {
-	if !t.rootaccess {
-		return nil, storage.ErrNoRootAccess
-	}
-
 	var roots []v1.DirectoryID
 
 	rows, err := t.db.QueryContext(ctx, "SELECT id FROM directories WHERE parent_id IS NULL")
