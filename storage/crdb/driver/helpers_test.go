@@ -5,10 +5,11 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	v1 "github.com/infratographer/fertilesoil/api/v1"
 	"github.com/infratographer/fertilesoil/storage"
 	"github.com/infratographer/fertilesoil/storage/crdb/utils"
-	"github.com/stretchr/testify/assert"
 )
 
 var baseDBURL *url.URL

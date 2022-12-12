@@ -655,5 +655,4 @@ func TestCreateErroneousDirectory(t *testing.T) {
 	}, apiv1.DirectoryID(uuid.New()))
 	assert.Error(t, err, "should have errored creating directory")
 	assert.Nil(t, nodir, "directory should be nil")
-
 }
