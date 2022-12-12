@@ -1,5 +1,16 @@
 Fertile Soil
 ===========
+Status
+------
+![Tests](https://github.com/infratographer/fertilesoil/actions/workflows/test.yml/badge.svg)
+![Security](https://github.com/infratographer/fertilesoil/actions/workflows/security.yml/badge.svg)
+![CodeQL](https://github.com/infratographer/fertilesoil/actions/workflows/codeql-analysis.yml/badge.svg)
+![Dependency Review](https://github.com/infratographer/fertilesoil/actions/workflows/dependency-review.yml/badge.svg)
+![release main](https://github.com/infratographer/fertilesoil/actions/workflows/release-latest.yml/badge.svg)
+![release](https://github.com/infratographer/fertilesoil/actions/workflows/release.yml/badge.svg)
+
+Summary
+-------
 
 It's what needed for healthy trees to grow in.
 
