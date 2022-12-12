@@ -156,6 +156,12 @@ func (t *Driver) GetParentsUntilAncestor(
 	ctx context.Context,
 	child, ancestor v1.DirectoryID,
 ) ([]v1.DirectoryID, error) {
+	// optimization: we don't need to go through the database
+	// if the child is the ancestor
+	if child == ancestor {
+		return []v1.DirectoryID{}, nil
+	}
+
 	var parents []v1.DirectoryID
 
 	// TODO(jaosorior): What's more efficient? A single recursive query or multiple queries?

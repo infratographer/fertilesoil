@@ -2,6 +2,7 @@ package driver_test
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	"github.com/google/uuid"
@@ -369,6 +370,32 @@ func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
 	assert.Len(t, children, 0, "should have 0 children")
 }
 
+func TestGetParentsUntilAncestorIsEmptyIfChildIsAncestor(t *testing.T) {
+	t.Parallel()
+
+	db := utils.GetNewTestDB(t, baseDBURL)
+	store := driver.NewDirectoryAdminDriver(db)
+
+	rootdir := withRootDir(t, store)
+
+	ancestors, err := store.GetParentsUntilAncestor(context.Background(), rootdir.ID, rootdir.ID)
+	assert.NoError(t, err, "should not have errored")
+	assert.Len(t, ancestors, 0, "should have 0 children")
+}
+
+func TestGetParentsUntilAncestorParentNotFound(t *testing.T) {
+	t.Parallel()
+
+	db := utils.GetNewTestDB(t, baseDBURL)
+	store := driver.NewDirectoryAdminDriver(db)
+
+	rootdir := withRootDir(t, store)
+
+	ancestors, err := store.GetParentsUntilAncestor(context.Background(), v1.DirectoryID(uuid.New()), rootdir.ID)
+	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
+	assert.Nil(t, ancestors, "should be nil")
+}
+
 func TestGetChildrenFromUnknownReturnsEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -378,4 +405,52 @@ func TestGetChildrenFromUnknownReturnsEmpty(t *testing.T) {
 	children, err := store.GetChildren(context.Background(), v1.DirectoryID(uuid.New()))
 	assert.NoError(t, err, "should have errored")
 	assert.Len(t, children, 0, "should have 0 children")
+}
+
+func TestOperationsFailWithBadDatabaseConnection(t *testing.T) {
+	t.Parallel()
+
+	// We're opening a valid database connection, but there's not database set.
+	dbconn, err := sql.Open("postgres", baseDBURL.String())
+	assert.NoError(t, err, "error creating db connection")
+
+	store := driver.NewDirectoryAdminDriver(dbconn)
+
+	rd := &v1.Directory{
+		Name: "testdir",
+	}
+
+	// Create root fails
+	_, err = store.CreateRoot(context.Background(), rd)
+	assert.Error(t, err, "should have errored")
+
+	// get root fails
+	_, err = store.ListRoots(context.Background())
+	assert.Error(t, err, "should have errored")
+
+	// Create directory fails
+	someID := v1.DirectoryID(uuid.New())
+	d := &v1.Directory{
+		Name:   "testdir",
+		Parent: &someID,
+	}
+	_, err = store.CreateDirectory(context.Background(), d)
+	assert.Error(t, err, "should have errored")
+
+	// Get directory fails
+	_, err = store.GetDirectory(context.Background(), someID)
+	assert.Error(t, err, "should have errored")
+
+	// Get parents fails
+	_, err = store.GetParents(context.Background(), someID)
+	assert.Error(t, err, "should have errored")
+
+	// Get children fails
+	_, err = store.GetChildren(context.Background(), someID)
+	assert.Error(t, err, "should have errored")
+
+	// Get parents until ancestor fails
+	otherID := v1.DirectoryID(uuid.New())
+	_, err = store.GetParentsUntilAncestor(context.Background(), someID, otherID)
+	assert.Error(t, err, "should have errored")
 }
