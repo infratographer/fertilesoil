@@ -12,7 +12,7 @@ type Client interface {
 	CreateDirectory(c context.Context, r *v1.CreateDirectoryRequest, parent v1.DirectoryID) (*v1.DirectoryFetch, error)
 	GetDirectory(c context.Context, id v1.DirectoryID) (*v1.DirectoryFetch, error)
 	GetParents(c context.Context, id v1.DirectoryID) (*v1.DirectoryList, error)
-	GetParentsUntil(c context.Context, id v1.DirectoryID, until v1.DirectoryID) (*v1.DirectoryList, error)
+	GetParentsUntil(c context.Context, id, until v1.DirectoryID) (*v1.DirectoryList, error)
 	GetChildren(c context.Context, id v1.DirectoryID) (*v1.DirectoryList, error)
 }
 
@@ -23,7 +23,7 @@ type RootClient interface {
 }
 
 type RawHTTP interface {
-	DoRaw(c context.Context, method string, path string, data io.Reader) (*http.Response, error)
+	DoRaw(c context.Context, method, path string, data io.Reader) (*http.Response, error)
 }
 
 type HTTPClient interface {
