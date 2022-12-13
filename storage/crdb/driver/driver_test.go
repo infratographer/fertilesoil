@@ -18,7 +18,7 @@ func TestCreateAndGetRoot(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rd := withRootDir(t, store)
 
@@ -33,7 +33,7 @@ func TestListRootOneRoot(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rd := withRootDir(t, store)
 
@@ -47,7 +47,7 @@ func TestListMultipleRoots(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rd1 := withRootDir(t, store)
 	rd2 := withRootDir(t, store)
@@ -67,7 +67,7 @@ func TestCreateMultipleRoots(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rd1 := withRootDir(t, store)
 	rd2 := withRootDir(t, store)
@@ -90,7 +90,7 @@ func TestCantCreateRootWithParent(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	randomPID := v1.DirectoryID(uuid.New())
 	d := &v1.Directory{
@@ -107,7 +107,7 @@ func TestCreateAndGetDirectory(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -143,7 +143,7 @@ func TestCreateDirectoryWithParentThatDoesntExist(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	pid := v1.DirectoryID(uuid.New())
 	d := &v1.Directory{
@@ -160,7 +160,7 @@ func TestCreateDirectoryWithoutParent(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	d := &v1.Directory{
 		Name: "testdir",
@@ -175,7 +175,7 @@ func TestQueryUnknownDirectory(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	d, err := store.GetDirectory(context.Background(), v1.DirectoryID(uuid.New()))
 	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
@@ -186,7 +186,7 @@ func TestGetSingleParent(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -209,7 +209,7 @@ func TestGetMultipleParents(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -263,7 +263,7 @@ func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -276,7 +276,7 @@ func TestGetParentsFromUnknownShouldFail(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	parents, err := store.GetParents(context.Background(), v1.DirectoryID(uuid.New()))
 	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
@@ -287,7 +287,7 @@ func TestGetChildrenBasic(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -310,7 +310,7 @@ func TestGetChildrenMultiple(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -361,7 +361,7 @@ func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -374,7 +374,7 @@ func TestGetParentsUntilAncestorIsEmptyIfChildIsAncestor(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -387,7 +387,7 @@ func TestGetParentsUntilAncestorParentNotFound(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	rootdir := withRootDir(t, store)
 
@@ -400,7 +400,7 @@ func TestGetChildrenFromUnknownReturnsEmpty(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
-	store := driver.NewDirectoryAdminDriver(db)
+	store := driver.NewDirectoryDriver(db)
 
 	children, err := store.GetChildren(context.Background(), v1.DirectoryID(uuid.New()))
 	assert.NoError(t, err, "should have errored")
@@ -414,7 +414,7 @@ func TestOperationsFailWithBadDatabaseConnection(t *testing.T) {
 	dbconn, err := sql.Open("postgres", baseDBURL.String())
 	assert.NoError(t, err, "error creating db connection")
 
-	store := driver.NewDirectoryAdminDriver(dbconn)
+	store := driver.NewDirectoryDriver(dbconn)
 
 	rd := &v1.Directory{
 		Name: "testdir",

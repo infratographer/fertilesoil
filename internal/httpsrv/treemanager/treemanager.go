@@ -24,7 +24,7 @@ func NewServer(
 	shutdownTime time.Duration,
 	unix string,
 ) *common.Server {
-	t := driver.NewDirectoryAdminDriver(db)
+	t := driver.NewDirectoryDriver(db)
 	s := common.NewServer(logger, listen, db, t, debug, shutdownTime, unix)
 
 	s.SetHandler(newHandler(logger, s))

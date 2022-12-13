@@ -28,11 +28,23 @@ func withRootDir(t *testing.T, store storage.DirectoryAdmin) *v1.Directory {
 	d := &v1.Directory{
 		Name: "root",
 	}
-
-	rd, err := store.CreateRoot(context.Background(), d)
+	rd, err := createTestRootDir(store, d)
 	assert.NoError(t, err, "error creating root directory")
 	assert.NotNil(t, rd.Metadata, "metadata should not be nil")
 	assert.Equal(t, d.Name, rd.Name, "name should match")
 
 	return d
+}
+
+func createTestRootDir(store storage.DirectoryAdmin, dir *v1.Directory) (*v1.Directory, error) {
+	var d *v1.Directory
+	if dir == nil {
+		d = &v1.Directory{
+			Name: "root",
+		}
+	} else {
+		d = dir
+	}
+
+	return store.CreateRoot(context.Background(), d)
 }
