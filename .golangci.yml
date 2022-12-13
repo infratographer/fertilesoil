@@ -112,6 +112,8 @@ linters-settings:
       - BUG
       - FIXME
       - HACK
+  gofumpt:
+    extra-rules: true
   gocritic:
     enabled-checks:
       # Diagnostic
