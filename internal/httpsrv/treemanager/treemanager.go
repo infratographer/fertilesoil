@@ -12,8 +12,10 @@ import (
 
 	v1 "github.com/infratographer/fertilesoil/api/v1"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/common"
+	"github.com/infratographer/fertilesoil/notifier/noop"
 	"github.com/infratographer/fertilesoil/storage"
 	"github.com/infratographer/fertilesoil/storage/crdb/driver"
+	sn "github.com/infratographer/fertilesoil/storage/notifier"
 )
 
 func NewServer(
@@ -24,8 +26,11 @@ func NewServer(
 	shutdownTime time.Duration,
 	unix string,
 ) *common.Server {
-	t := driver.NewDirectoryDriver(db)
-	s := common.NewServer(logger, listen, db, t, debug, shutdownTime, unix)
+	dbdrv := driver.NewDirectoryDriver(db)
+	noopNotif := noop.NewNotifier()
+
+	store := sn.StorageWithNotifier(dbdrv, noopNotif, sn.WithNotifyRetrier())
+	s := common.NewServer(logger, listen, db, store, debug, shutdownTime, unix)
 
 	s.SetHandler(newHandler(logger, s))
 
