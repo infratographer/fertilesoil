@@ -9,6 +9,6 @@ import (
 type Notifier interface {
 	NotifyCreate(ctx context.Context, d *apiv1.Directory) error
 	NotifyUpdate(ctx context.Context, d *apiv1.Directory) error
-	NotifyDeleteSoft(ctx context.Context, d *apiv1.Directory) error
+	NotifyDelete(ctx context.Context, d *apiv1.Directory) error
 	NotifyDeleteHard(ctx context.Context, d *apiv1.Directory) error
 }

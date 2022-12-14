@@ -24,7 +24,7 @@ func (n *noopNotifier) NotifyUpdate(ctx context.Context, d *apiv1.Directory) err
 	return nil
 }
 
-func (n *noopNotifier) NotifyDeleteSoft(ctx context.Context, d *apiv1.Directory) error {
+func (n *noopNotifier) NotifyDelete(ctx context.Context, d *apiv1.Directory) error {
 	return nil
 }
 
