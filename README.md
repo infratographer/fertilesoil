@@ -37,6 +37,25 @@ The intention is to build a bunch of micro-services that would call the tree man
 to get the tree for a given tenant, and then use that tree to determine what
 to do.
 
+### What's provided?
+
+The tree manager provides the following:
+- A directory tree representation
+- A storage system to store the tree in a database
+- APIs to access and manage the tree
+
+### What's not provided?
+
+The tree manager does not provide the following:
+
+- A way to authenticate users
+- A way to authorize users
+- A way to manage users
+- A way to manage applications
+- Resources for applications
+
+All of these are application-specific and are not provided by the tree manager.
+
 Components
 ----------
 
@@ -69,3 +88,15 @@ as part of this project.
 ### Tree Client
 
 A client library that can be used to access the tree manager [is provided](client/v1).
+
+Applications
+------------
+
+In this model, nothing is special about applications. They are all expected to just 
+scoped to a specific node in the tree. The tree manager provides the APIs to access
+the tree, and the applications are expected to use that to determine what to do.
+
+Thus, any notion of a global resource or application is not provided by the tree manager nor encouraged.
+
+For a more detailed descriptions on the components or applications that
+are to be built for this platform, view the [Applications](docs/apps.md) doc.
