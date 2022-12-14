@@ -62,7 +62,7 @@ The concept of hierarchical multi-tenancy is not limited to Kubernetes and OpenS
 It is a concept that can be applied to any system that provides multi-tenancy.
 In fact, other systems like GCP provide hierarchical multi-tenancy. In GCP the tree
 structure is very clear and is represented by the organization, folders, and projects 
-[[5](https://cloud.google.com/resource-manager/docs/cloud-platform-resource-hierarchy)].
+[[6](https://cloud.google.com/resource-manager/docs/cloud-platform-resource-hierarchy)].
 
 ### Hierarchical multi-tenancy in this project
 
@@ -96,3 +96,6 @@ can be done without breaking the API.
 
 [4] https://object-storage-ca-ymq-1.vexxhost.net/swift/v1/6e4619c416ff4bd19e1c087f27a43eea/www-assets-prod/presentation-media/Flat-no-more-Hierarchical-multitenancy-and-projects-acting-as-domains-in-OpenStack.pdf
 
+[5] https://youtu.be/j5x6NumP21c
+
+[6] https://cloud.google.com/resource-manager/docs/cloud-platform-resource-hierarchy
