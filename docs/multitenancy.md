@@ -58,11 +58,24 @@ the added advantage of providing role inheritance, and resource access which was
 tedious to implement before. Note that this is not a concept that is provided by
 Kubernetes itself, but by a third-party controller.
 
-The concept of hierarchical multi-tenancy is not limited to Kubernetes and OpenStack.
-It is a concept that can be applied to any system that provides multi-tenancy.
-In fact, other systems like GCP provide hierarchical multi-tenancy. In GCP the tree
-structure is very clear and is represented by the organization, folders, and projects 
+Both OpenStack and Kubernetes started with flatter models and with time, they
+introduced the concept of hierarchical multi-tenancy. This is a concept that
+is not limited to these two projects. It is a concept that can be applied to
+any system that provides multi-tenancy. In fact, other systems like GCP
+provide hierarchical multi-tenancy. In GCP the tree structure is very clear
+and is represented by the organization, folders, and projects 
 [[6](https://cloud.google.com/resource-manager/docs/cloud-platform-resource-hierarchy)].
+
+In fact, even before cloud, we already managed tree-like structures that may
+or may not have been multi-tenant through LDAP. LDAP is a directory service
+that provides a tree-like structure of entries. Thus, the native
+name that we chose for the nodes is directory with the tree itself being a
+directory tree.
+
+We may still refer to nodes as tenants. In a similar fashion, we don't
+refer to files as inodes, but as files. The idea is to provide a common
+language that is easy to understand and that is not tied to the underlying
+implementation.
 
 ### Hierarchical multi-tenancy in this project
 
