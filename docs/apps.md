@@ -24,9 +24,9 @@ own identity management. However, identities are needed for any platform, and th
 the intent is to build an application that can easily provide usable identities to
 Infratographer services.
 
-The tree manager provide a way to associate an
-identity with a node in the tree. For this, an application will be built
-that will associate an identity mapping with a node in the tree.
+The tree manager provides a way to associate an identity with a node in the tree.
+For this, an application will be built that will associate an identity mapping
+with a node in the tree.
 
 ![Identity](images/identity.jpg)
 
@@ -44,6 +44,22 @@ identity that we can trust and is scoped to a node in the tree. The idea is to f
 RFC 8693 (OAuth 2.0 Token Exchange) [[1](https://www.rfc-editor.org/rfc/rfc8693.html)],
 in order to allow for a token exchange between the upstream identity provider and
 the node-scoped platform identity.
+
+Note that an identity mapping is not meant to be a unique entity. It's meant to
+be a mapping between an upstream identity and a downstream identity towards a node
+in the tree. There may be multiple mappings for a given upstream identity towards
+multiple nodes in the tree. This is because the upstream identity may be used by
+multiple tenants, this would also allow for easier mapping of CI/CD pipeline-provided
+identities to the platform. e.g. GitHub actions
+[[2](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect)]
+(and Buildkte in the near future) provides an OIDC token that can be used to 
+authenticate to the platform, we should be able to take these tokens into use
+to allow for users building automation with these tokens.
+
+Another example is Kubernetes, which allows for OIDC tokens to be used to
+authenticate to the cluster [[3](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens)]. We could leverage
+a mapping between the Kubernetes OIDC token and the platform identity to allow
+for services running in Kubernetes to be able to access the platform.
 
 To follow the work, see [the DMV project](https://github.com/infratographer/dmv) [[2](https://github.com/infratographer/dmv)]. The goal is to get a uniform identity
 that can be used to access Infratographer services, and that we can use to get
@@ -97,5 +113,9 @@ References
 ----------
 
 [1] https://www.rfc-editor.org/rfc/rfc8693.html
+
+[2] https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
+
+[3] https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens
 
 [2] https://github.com/infratographer/dmv
