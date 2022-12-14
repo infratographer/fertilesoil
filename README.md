@@ -80,6 +80,18 @@ Any storage implementation needs to implement the [`storage.Storage`](storage/in
 
 Since the access pattern is read-heavy, the storage system needs to be optimized for that.
 
+### Notification System
+
+The notification system is used to notify applications of changes to the tree.
+
+Given that applications wouldn't have direct access to the database, it is up
+to the individual applications to subscribe to the notification system to know
+if a child node has been added or removed and update their internal state
+accordingly.
+
+Any notification system needs to implement the [`notification.Notifier`]
+(notification/interface.go) interface.
+
 ### Tree Manager
 
 A sample server implementation is provided in as the `treeman` command that's built
