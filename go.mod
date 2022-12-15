@@ -13,7 +13,7 @@ require (
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.1
 	github.com/zsais/go-gin-prometheus v0.1.0
-	go.infratographer.com/x v0.0.0-20221201150359-af418db1bfc3
+	go.infratographer.com/x v0.0.0-20221215180826-7cc9044fe585
 	go.uber.org/zap v1.24.0
 )
 
