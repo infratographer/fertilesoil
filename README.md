@@ -89,8 +89,8 @@ to the individual applications to subscribe to the notification system to know
 if a child node has been added or removed and update their internal state
 accordingly.
 
-Any notification system needs to implement the [`notification.Notifier`]
-(notification/interface.go) interface.
+Any notification system needs to implement the [`notification.Notifier`](notification/interface.go)
+interface.
 
 ### Tree Manager
 
