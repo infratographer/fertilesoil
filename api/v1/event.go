@@ -1,12 +1,14 @@
 package v1
 
+import "time"
+
 // EventType is the type of event that occurred.
 type EventType string
 
 const (
 	EventTypeCreate     EventType = "create"
 	EventTypeUpdate     EventType = "update"
-	EventTypeDeleteSoft EventType = "deletesoft"
+	EventTypeDelete     EventType = "delete"
 	EventTypeDeleteHard EventType = "deletehard"
 )
 
@@ -14,6 +16,6 @@ const (
 type DirectoryEvent struct {
 	DirectoryRequestMeta
 	Type      EventType `json:"type"`
-	Time      string    `json:"time"`
+	Time      time.Time `json:"time"`
 	Directory Directory `json:"directory"`
 }
