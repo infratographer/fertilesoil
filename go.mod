@@ -8,7 +8,7 @@ require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/google/uuid v1.3.0
 	github.com/nats-io/nats-server/v2 v2.9.9
-	github.com/nats-io/nats.go v1.21.0
+	github.com/nats-io/nats.go v1.22.0
 	github.com/pressly/goose/v3 v3.7.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
