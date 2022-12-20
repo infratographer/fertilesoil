@@ -67,7 +67,7 @@ func newTestServer(t *testing.T, skt string) *common.Server {
 	assert.NoError(t, err, "error creating logger")
 
 	dbconn := dbutils.GetNewTestDB(t, baseDBURL)
-	tm := treemanager.NewServer(tl, srvhost, dbconn, debug, defaultShutdownTime, skt)
+	tm := treemanager.NewServer(tl, srvhost, dbconn, debug, defaultShutdownTime, skt, nil)
 
 	return tm
 }
@@ -432,7 +432,7 @@ func TestServerWithBadDB(t *testing.T) {
 	dbconn, err := sql.Open("postgres", baseDBURL.String())
 	assert.NoError(t, err, "error creating db connection")
 
-	srv := treemanager.NewServer(tl, srvhost, dbconn, debug, defaultShutdownTime, skt)
+	srv := treemanager.NewServer(tl, srvhost, dbconn, debug, defaultShutdownTime, skt, nil)
 
 	defer func() {
 		err := srv.Shutdown()

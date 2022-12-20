@@ -2,6 +2,11 @@ package v1
 
 import "time"
 
+const (
+	// EventSubject is the subject that events are published to.
+	EventSubject = "directories"
+)
+
 // EventType is the type of event that occurred.
 type EventType string
 

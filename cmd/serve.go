@@ -19,6 +19,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/infratographer/fertilesoil/internal/httpsrv/treemanager"
+	"github.com/infratographer/fertilesoil/notifier/nats"
+	natsutils "github.com/infratographer/fertilesoil/notifier/nats/utils"
 	dbutils "github.com/infratographer/fertilesoil/storage/crdb/utils"
 )
 
@@ -48,6 +50,7 @@ func init() {
 	dbutils.RegisterDBArgs(v, serveCmd.Flags())
 	ginx.MustViperFlags(v, serveCmd.Flags(), defaultListen)
 	loggingx.MustViperFlags(v, serveCmd.Flags())
+	natsutils.RegisterNATSArgs(v, serveCmd.Flags())
 
 	// Server flags
 	flags := serveCmd.Flags()
@@ -80,6 +83,20 @@ func serverRunE(cmd *cobra.Command, args []string) error {
 		return dberr
 	}
 
+	v := viper.GetViper()
+
+	natconn, natserr := natsutils.BuildNATSConnFromArgs(v)
+	if natserr != nil {
+		return natserr
+	}
+
+	subj := natsutils.BuildNATSSubject(v)
+
+	notif, notiferr := nats.NewNotifier(natconn, subj)
+	if notiferr != nil {
+		return notiferr
+	}
+
 	s := treemanager.NewServer(
 		l,
 		viper.GetString("listen"),
@@ -87,6 +104,7 @@ func serverRunE(cmd *cobra.Command, args []string) error {
 		viper.GetBool("debug"),
 		viper.GetDuration("server.shutdown"),
 		viper.GetString("server.unix_socket"),
+		notif,
 	)
 
 	go func() {
