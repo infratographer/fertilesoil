@@ -14,7 +14,7 @@ import (
 var Migrations embed.FS
 
 // BootStrap is a helper function to bootstrap the database
-// with the initial schema
+// with the initial schema.
 func BootStrap(dialect string, db *sql.DB) error {
 	goose.SetBaseFS(Migrations)
 	if err := goose.SetDialect(dialect); err != nil {
