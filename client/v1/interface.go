@@ -57,3 +57,9 @@ func NewHTTPClient(cfg *ClientConfig) HTTPClient {
 func NewHTTPRootClient(cfg *ClientConfig) HTTPRootClient {
 	return newFullHTTPClient(cfg)
 }
+
+type Watcher interface {
+	// Watch starts watching for events.
+	// It returns a channel for events and a channel for errors.
+	Watch(ctx context.Context) (<-chan *v1.DirectoryEvent, <-chan error)
+}
