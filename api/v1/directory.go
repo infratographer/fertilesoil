@@ -25,6 +25,14 @@ type Directory struct {
 	Parent *DirectoryID `json:"parent,omitempty"`
 }
 
+func (d *Directory) IsRoot() bool {
+	return d.Parent == nil
+}
+
+func (d *Directory) IsDeleted() bool {
+	return !d.DeletedAt.IsZero()
+}
+
 type DirectoryID uuid.UUID
 
 func ParseDirectoryID(id string) (DirectoryID, error) {

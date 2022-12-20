@@ -106,6 +106,11 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 	return d, nil
 }
 
+func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) error {
+	// TODO(jaosorior): Implement soft-delete.
+	return nil
+}
+
 // GetDirectoryByID returns a directory by its ID.
 // Note that this call does not give out parent information.
 func (t *Driver) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.Directory, error) {

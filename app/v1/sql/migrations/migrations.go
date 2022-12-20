@@ -1,5 +1,5 @@
-// Package sql provides an embedded filesystem containing all the database migrations
-package sql
+// Package migrations provides an embedded filesystem containing all the database migrations
+package migrations
 
 import (
 	"database/sql"

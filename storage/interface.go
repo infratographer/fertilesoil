@@ -25,6 +25,7 @@ type RootReader interface {
 // Writer is the interface that allows doing basic write operations.
 type Writer interface {
 	CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Directory, error)
+	DeleteDirectory(ctx context.Context, id v1.DirectoryID) error
 }
 
 // RootWriter is the interface that allows doing all write operations.
