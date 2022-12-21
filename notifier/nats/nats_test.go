@@ -80,11 +80,14 @@ func TestBasicNotifications(t *testing.T) {
 	waitConnected(t, conn)
 	waitConnected(t, clientconn)
 
-	sub, err := clientconn.SubscribeSync(subject)
-	assert.NoError(t, err, "subscribing to nats subject")
-
 	ntf, err := nats.NewNotifier(conn, subject)
 	assert.NoError(t, err, "creating nats notifier")
+
+	msgChan := make(chan *natsgo.Msg, 10)
+	_, err = clientconn.Subscribe(subject, func(m *natsgo.Msg) {
+		msgChan <- m
+	})
+	assert.NoError(t, err, "creating NATS subscription")
 
 	// Send create
 	dir := &apiv1.Directory{
@@ -102,8 +105,7 @@ func TestBasicNotifications(t *testing.T) {
 	assert.NoError(t, err, "notifying create")
 
 	// Receive create
-	msg, err := sub.NextMsg(tmout)
-	assert.NoError(t, err, "receiving nats message")
+	msg := <-msgChan
 
 	unmarshalled := &apiv1.DirectoryEvent{}
 	err = json.Unmarshal(msg.Data, unmarshalled)
@@ -122,8 +124,7 @@ func TestBasicNotifications(t *testing.T) {
 	assert.NoError(t, err, "notifying update")
 
 	// Receive update
-	msg, err = sub.NextMsg(tmout)
-	assert.NoError(t, err, "receiving nats message")
+	msg = <-msgChan
 
 	unmarshalled = &apiv1.DirectoryEvent{}
 	err = json.Unmarshal(msg.Data, unmarshalled)
@@ -142,8 +143,7 @@ func TestBasicNotifications(t *testing.T) {
 	assert.NoError(t, err, "notifying delete")
 
 	// Receive delete
-	msg, err = sub.NextMsg(tmout)
-	assert.NoError(t, err, "receiving nats message")
+	msg = <-msgChan
 
 	unmarshalled = &apiv1.DirectoryEvent{}
 	err = json.Unmarshal(msg.Data, unmarshalled)
@@ -160,8 +160,7 @@ func TestBasicNotifications(t *testing.T) {
 	assert.NoError(t, err, "notifying delete hard")
 
 	// Receive delete hard
-	msg, err = sub.NextMsg(tmout)
-	assert.NoError(t, err, "receiving nats message")
+	msg = <-msgChan
 
 	unmarshalled = &apiv1.DirectoryEvent{}
 	err = json.Unmarshal(msg.Data, unmarshalled)
