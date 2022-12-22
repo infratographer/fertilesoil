@@ -5,6 +5,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -19,13 +20,16 @@ const (
 func StartNatsServer() (*natssrv.Server, error) {
 	const maxControlLine = 2048
 
-	s := natssrv.New(&natssrv.Options{
+	s, err := natssrv.NewServer(&natssrv.Options{
 		Host:           "127.0.0.1",
 		Port:           natssrv.RANDOM_PORT,
 		NoLog:          true,
 		NoSigs:         true,
 		MaxControlLine: maxControlLine,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("building nats server: %w", err)
+	}
 
 	//nolint:errcheck // we don't care about the error here
 	go natssrv.Run(s)
