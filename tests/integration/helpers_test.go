@@ -35,6 +35,9 @@ const (
 var (
 	baseDBURL         *url.URL
 	baseServerAddress = mustParseURL("http://" + srvhost)
+
+	// Goose is not thread-safe, so we need to lock it.
+	gooseDBMutex sync.Mutex
 )
 
 func mustParseURL(u string) *url.URL {
@@ -72,7 +75,12 @@ func newTestServerWithNotifier(t *testing.T, skt string, notif notifier.Notifier
 	tl, err := zap.NewDevelopment()
 	assert.NoError(t, err, "error creating logger")
 
+	gooseDBMutex.Lock()
+
 	dbconn := dbutils.GetNewTestDB(t, baseDBURL)
+
+	gooseDBMutex.Unlock()
+
 	tm := treemanager.NewServer(tl, srvhost, dbconn, debug, defaultShutdownTime, skt, notif)
 
 	return tm
@@ -113,6 +121,8 @@ func waitForServer(t *testing.T, cli clientv1.HTTPClient) {
 func setupAppStorage(t *testing.T) appv1.AppStorage {
 	t.Helper()
 
+	gooseDBMutex.Lock()
+	defer gooseDBMutex.Unlock()
 	dbConn := dbutils.GetNewTestDBForApp(t, baseDBURL)
 
 	err := appsqlmig.BootStrap("postgres", dbConn)
