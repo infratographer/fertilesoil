@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/cenkalti/backoff/v4 v4.2.0
 	github.com/cockroachdb/cockroach-go/v2 v2.2.19
-	github.com/gin-gonic/gin v1.8.1
+	github.com/gin-gonic/gin v1.8.2
 	github.com/google/uuid v1.3.0
 	github.com/nats-io/nats-server/v2 v2.9.10
 	github.com/nats-io/nats.go v1.22.0
