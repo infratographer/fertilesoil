@@ -49,10 +49,40 @@ func NewTestDBServerOrDie() (*url.URL, StopServerFunc) {
 	return dbURL, cleanup
 }
 
+// Returns a new test database for an application.
+// The database is not migrated.
+func GetNewTestDBForApp(t *testing.T, baseDBURL *url.URL) *sql.DB {
+	t.Helper()
+
+	return getNewTestDB(t, baseDBURL, "app")
+}
+
+// Returns a new test database for the tree manager
+// with the migrations applied.
 func GetNewTestDB(t *testing.T, baseDBURL *url.URL) *sql.DB {
 	t.Helper()
 
+	dbConn := getNewTestDB(t, baseDBURL, "")
+
+	once.Do(func() {
+		goose.SetBaseFS(migrations.Migrations)
+
+		if err := goose.SetDialect("postgres"); err != nil {
+			t.Fatalf("error setting dialect: %v", err)
+		}
+	})
+
+	if err := goose.Up(dbConn, "."); err != nil {
+		t.Fatalf("error running migrations: %v", err)
+	}
+	return dbConn
+}
+
+func getNewTestDB(t *testing.T, baseDBURL *url.URL, suffix string) *sql.DB {
+	t.Helper()
+
 	dbName := strings.ToLower(strings.ReplaceAll(t.Name(), "/", "_"))
+	dbName += suffix
 
 	baseDB, err := sql.Open("postgres", baseDBURL.String())
 	if err != nil {
@@ -69,16 +99,5 @@ func GetNewTestDB(t *testing.T, baseDBURL *url.URL) *sql.DB {
 		t.Fatalf("error opening database: %v", err)
 	}
 
-	once.Do(func() {
-		goose.SetBaseFS(migrations.Migrations)
-
-		if err := goose.SetDialect("postgres"); err != nil {
-			t.Fatalf("error setting dialect: %v", err)
-		}
-	})
-
-	if err := goose.Up(dbConn, "."); err != nil {
-		t.Fatalf("error running migrations: %v", err)
-	}
 	return dbConn
 }

@@ -11,7 +11,7 @@ import (
 )
 
 type controller struct {
-	c       clientv1.Client
+	c       clientv1.ReadOnlyClient
 	w       clientv1.Watcher
 	baseDir apiv1.DirectoryID
 	store   AppStorage
@@ -43,7 +43,7 @@ func withReconciler(r Reconciler) Option {
 	}
 }
 
-func withClient(cli clientv1.Client) Option {
+func withClient(cli clientv1.ReadOnlyClient) Option {
 	return func(c *controller) {
 		c.c = cli
 	}
