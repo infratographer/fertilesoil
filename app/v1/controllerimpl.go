@@ -207,7 +207,7 @@ func (c *controller) processIncomingEvent(ctx context.Context, ev *apiv1.Directo
 		return fmt.Errorf("error persisting directory: %w", err)
 	}
 
-	return c.r.Reconcile(ctx, *ev)
+	return nil
 }
 
 func (c *controller) isRelevantEvent(ctx context.Context, ev *apiv1.DirectoryEvent) (bool, error) {
