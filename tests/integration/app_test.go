@@ -13,6 +13,13 @@ import (
 	natsutils "github.com/infratographer/fertilesoil/notifier/nats/utils"
 )
 
+// This scenario tests the following:
+//  1. Create a new application
+//  2. Create a new directory
+//  3. The application should be notified of the new directory
+//  4. The application should be notified of new subdirectories
+//  5. Even if we'd loose access to the notifications and reconnect, the application
+//     should be notified of the new directories via the reconcile loop
 func TestAppReconcileAndWatch(t *testing.T) {
 	t.Parallel()
 
@@ -114,12 +121,33 @@ func TestAppReconcileAndWatch(t *testing.T) {
 	// We should only have two reconcile calls
 	assert.Equal(t, apptester.getReconcileCalls(), uint32(2), "expected 2 reconcile calls")
 
+	// The app now looses access to notifications
+
+	clientconn.Close()
+
+	// Create a subdirectory
+	_, err = cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
+		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
+			Version: apiv1.APIVersion,
+		},
+		Name: "subtest",
+	}, rd.Directory.ID)
+	assert.NoError(t, err, "error creating directory")
+
 	// wait for a full reconcile
 	apptester.waitForReconcile()
 
 	// we should have 2 reconcile calls
 	// as the directories are up-to-date
-	assert.Equal(t, apptester.getReconcileCalls(), uint32(2), "expected 2 reconcile calls")
+	assert.Equal(t, apptester.getReconcileCalls(), uint32(3), "expected 3 reconcile calls")
+
+	evts = apptester.popEvents()
+
+	// We should have done one reconcile for the new directory
+	assert.Len(t, evts, 1, "expected 1 event")
+
+	// We should have created the directory
+	assert.Equal(t, apiv1.EventTypeCreate, evts[0].Type, "expected created event")
 
 	cancel()
 }
