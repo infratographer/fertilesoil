@@ -138,6 +138,7 @@ func setupTestApp(
 		appv1.WithWatcher(w),
 		appv1.WithStorage(store),
 		appv1.WithReconciler(r),
+		appv1.WithFullReconcileInterval(1, 2, time.Second),
 	)
 	if err != nil {
 		t.Fatalf("error creating app: %v", err)

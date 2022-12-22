@@ -50,3 +50,11 @@ var WithStorage = withStorage
 
 // WithWatcher is an Option that sets the watcher for the controller.
 var WithWatcher = withWatcher
+
+// WithFullReconcileInterval is an Option that sets the full reconcile interval
+// for the controller. The full reconcile interval is the interval at which the
+// controller will do a full reconcile of the directory tree.
+// The full reconcile interval is a random value between the minimum and maximum
+// interval.
+// The default full reconcile interval is between 5 minutes and 15 minutes.
+var WithFullReconcileInterval = withFullReconcileInterval
