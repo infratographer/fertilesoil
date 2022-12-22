@@ -50,6 +50,7 @@ func TestBasicNotifications(t *testing.T) {
 
 	msgChan := make(chan *natsgo.Msg, 10)
 	_, err = clientconn.Subscribe(subject, func(m *natsgo.Msg) {
+		t.Logf("Received message: %s", string(m.Data))
 		msgChan <- m
 	})
 	assert.NoError(t, err, "creating NATS subscription")
