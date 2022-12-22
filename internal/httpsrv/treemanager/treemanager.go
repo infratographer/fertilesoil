@@ -108,6 +108,7 @@ func createRootDirectory(s *common.Server) gin.HandlerFunc {
 
 		rd, err := s.T.CreateRoot(c, &d)
 		if err != nil {
+			s.L.Error("error creating root", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
