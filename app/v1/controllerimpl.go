@@ -16,7 +16,18 @@ type controller struct {
 	baseDir apiv1.DirectoryID
 	store   AppStorage
 	r       Reconciler
+
+	// Full Reconcile intervals
+	frMinimumInterval int
+	frMaximumInterval int
+	frDuration        time.Duration
 }
+
+const (
+	frMinimumInterval = 5
+	frMaximumInterval = 10
+	frDuration        = time.Minute
+)
 
 // NewController creates a new controller.
 // It takes a base directory and a list of options.
@@ -24,6 +35,10 @@ type controller struct {
 func newController(baseDir apiv1.DirectoryID, opts ...Option) (Controller, error) {
 	c := &controller{
 		baseDir: baseDir,
+		// full reconcile interval and duration
+		frMinimumInterval: frMinimumInterval,
+		frMaximumInterval: frMaximumInterval,
+		frDuration:        frDuration,
 	}
 
 	for _, opt := range opts {
@@ -61,9 +76,17 @@ func withWatcher(w clientv1.Watcher) Option {
 	}
 }
 
+func withFullReconcileInterval(min, max int, d time.Duration) Option {
+	return func(c *controller) {
+		c.frMinimumInterval = min
+		c.frMaximumInterval = max
+		c.frDuration = d
+	}
+}
+
 func (c *controller) Run(ctx context.Context) error {
 	// initialize ticker to check for updates at a random interval
-	ticker := time.NewTicker(getRandomTickerDuration())
+	ticker := time.NewTicker(c.getRandomTickerDuration())
 
 	// initialize directories
 	err := c.initializeDirectories(ctx)
@@ -83,7 +106,7 @@ func (c *controller) Run(ctx context.Context) error {
 				return err
 			}
 			// reset ticker to check for updates at a random interval
-			ticker.Reset(getRandomTickerDuration())
+			ticker.Reset(c.getRandomTickerDuration())
 		case err := <-errCh:
 			return err
 		case ev := <-evCh:
@@ -220,10 +243,9 @@ func (c *controller) isRelevantEvent(ctx context.Context, ev *apiv1.DirectoryEve
 	return trackingParent, nil
 }
 
-// getRandomTickerDuration returns a random duration between 5 and 30 minutes.
-func getRandomTickerDuration() time.Duration {
-	const minimumInterval = 5
-	const maximumInterval = 30
+// getRandomTickerDuration returns a random duration between
+// the frMinimumInterval and frMaximumInterval values.
+func (c *controller) getRandomTickerDuration() time.Duration {
 	//nolint:gosec // not used for crypto. just a random number to set an interval.
-	return time.Duration(minimumInterval+rand.Intn(maximumInterval)) * time.Minute
+	return time.Duration(c.frMinimumInterval+rand.Intn(c.frMaximumInterval)) * c.frDuration
 }

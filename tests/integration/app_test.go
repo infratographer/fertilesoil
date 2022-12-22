@@ -13,7 +13,7 @@ import (
 	natsutils "github.com/infratographer/fertilesoil/notifier/nats/utils"
 )
 
-func TestAppInitializes(t *testing.T) {
+func TestAppReconcileAndWatch(t *testing.T) {
 	t.Parallel()
 
 	// initialize socket to communicate with the tree manager
@@ -91,6 +91,35 @@ func TestAppInitializes(t *testing.T) {
 
 	// We should only have one reconcile call
 	assert.Equal(t, apptester.getReconcileCalls(), uint32(1), "expected 1 reconcile call")
+
+	// Create a directory
+	_, err = cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
+		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
+			Version: apiv1.APIVersion,
+		},
+		Name: "test",
+	}, rd.Directory.ID)
+	assert.NoError(t, err, "error creating directory")
+
+	apptester.waitForReconcile()
+
+	evts = apptester.popEvents()
+
+	// We should have done one reconcile for the new directory
+	assert.Len(t, evts, 1, "expected 1 event")
+
+	// We should have created the directory
+	assert.Equal(t, apiv1.EventTypeCreate, evts[0].Type, "expected created event")
+
+	// We should only have two reconcile calls
+	assert.Equal(t, apptester.getReconcileCalls(), uint32(2), "expected 2 reconcile calls")
+
+	// wait for a full reconcile
+	apptester.waitForReconcile()
+
+	// we should have 2 reconcile calls
+	// as the directories are up-to-date
+	assert.Equal(t, apptester.getReconcileCalls(), uint32(2), "expected 2 reconcile calls")
 
 	cancel()
 }
