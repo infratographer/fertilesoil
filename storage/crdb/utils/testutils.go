@@ -19,7 +19,7 @@ import (
 
 type StopServerFunc func()
 
-var once sync.Once
+var gooseMutex sync.Mutex
 
 func NewTestDBServer() (*url.URL, StopServerFunc, error) {
 	srv, err := testserver.NewTestServer()
@@ -62,15 +62,16 @@ func GetNewTestDBForApp(t *testing.T, baseDBURL *url.URL) *sql.DB {
 func GetNewTestDB(t *testing.T, baseDBURL *url.URL) *sql.DB {
 	t.Helper()
 
+	gooseMutex.Lock()
+	defer gooseMutex.Unlock()
+
 	dbConn := getNewTestDB(t, baseDBURL, "")
 
-	once.Do(func() {
-		goose.SetBaseFS(migrations.Migrations)
+	goose.SetBaseFS(migrations.Migrations)
 
-		if err := goose.SetDialect("postgres"); err != nil {
-			t.Fatalf("error setting dialect: %v", err)
-		}
-	})
+	if err := goose.SetDialect("postgres"); err != nil {
+		t.Fatalf("error setting dialect: %v", err)
+	}
 
 	if err := goose.Up(dbConn, "."); err != nil {
 		t.Fatalf("error running migrations: %v", err)
