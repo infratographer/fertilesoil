@@ -18,7 +18,9 @@ type sqlstorage struct {
 var _ appv1.AppStorage = (*sqlstorage)(nil)
 
 func New(conn *sql.DB) appv1.AppStorage {
-	return &sqlstorage{}
+	return &sqlstorage{
+		db: conn,
+	}
 }
 
 func (s *sqlstorage) IsDirectoryTracked(ctx context.Context, id apiv1.DirectoryID) (bool, error) {

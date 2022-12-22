@@ -3,7 +3,6 @@ package nats_test
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 	"time"
 
@@ -14,16 +13,13 @@ import (
 
 	apiv1 "github.com/infratographer/fertilesoil/api/v1"
 	"github.com/infratographer/fertilesoil/notifier/nats"
-)
-
-const (
-	tmout = 2 * time.Second
+	natsutils "github.com/infratographer/fertilesoil/notifier/nats/utils"
 )
 
 var natss *natssrv.Server
 
 func TestMain(m *testing.M) {
-	srv, err := startServer()
+	srv, err := natsutils.StartNatsServer()
 	if err != nil {
 		panic(err)
 	}
@@ -33,37 +29,6 @@ func TestMain(m *testing.M) {
 	defer natss.Shutdown()
 
 	m.Run()
-}
-
-func startServer() (*natssrv.Server, error) {
-	s := natssrv.New(&natssrv.Options{
-		Host:           "127.0.0.1",
-		Port:           natssrv.RANDOM_PORT,
-		NoLog:          true,
-		NoSigs:         true,
-		MaxControlLine: 2048,
-	})
-
-	//nolint:errcheck // we don't care about the error here
-	go natssrv.Run(s)
-
-	if !s.ReadyForConnections(tmout) {
-		return nil, errors.New("starting nats server: timeout")
-	}
-	return s, nil
-}
-
-func waitConnected(t *testing.T, c *natsgo.Conn) {
-	t.Helper()
-
-	timeout := time.Now().Add(tmout)
-	for time.Now().Before(timeout) {
-		if c.IsConnected() {
-			return
-		}
-		time.Sleep(25 * time.Millisecond)
-	}
-	t.Fatal("client connecting timeout")
 }
 
 func TestBasicNotifications(t *testing.T) {
@@ -77,8 +42,8 @@ func TestBasicNotifications(t *testing.T) {
 	clientconn, err := natsgo.Connect(natss.ClientURL())
 	assert.NoError(t, err, "connecting to nats server")
 
-	waitConnected(t, conn)
-	waitConnected(t, clientconn)
+	natsutils.WaitConnected(t, conn)
+	natsutils.WaitConnected(t, clientconn)
 
 	ntf, err := nats.NewNotifier(conn, subject)
 	assert.NoError(t, err, "creating nats notifier")
@@ -177,7 +142,7 @@ func TestNotifyCreateFailsOnBadConnection(t *testing.T) {
 	conn, err := natsgo.Connect(natss.ClientURL())
 	assert.NoError(t, err, "connecting to nats server")
 
-	waitConnected(t, conn)
+	natsutils.WaitConnected(t, conn)
 
 	ntf, err := nats.NewNotifier(conn, subject)
 	assert.NoError(t, err, "creating nats notifier")
@@ -210,7 +175,7 @@ func TestNotifierCreateFailsOnBadConnection(t *testing.T) {
 	conn, err := natsgo.Connect(natss.ClientURL())
 	assert.NoError(t, err, "connecting to nats server")
 
-	waitConnected(t, conn)
+	natsutils.WaitConnected(t, conn)
 
 	// Close the connection
 	conn.Close()
