@@ -13,6 +13,7 @@ import (
 
 	apiv1 "github.com/infratographer/fertilesoil/api/v1"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/treemanager"
+	"github.com/infratographer/fertilesoil/storage/crdb/driver"
 	"github.com/infratographer/fertilesoil/tests/integration"
 	testutils "github.com/infratographer/fertilesoil/tests/utils"
 )
@@ -310,6 +311,8 @@ func TestServerWithBadDB(t *testing.T) {
 	dbconn, err := sql.Open("postgres", baseDBURL.String())
 	assert.NoError(t, err, "error creating db connection")
 
+	store := driver.NewDirectoryDriver(dbconn)
+
 	srv := treemanager.NewServer(
 		tl,
 		dbconn,
@@ -317,6 +320,7 @@ func TestServerWithBadDB(t *testing.T) {
 		treemanager.WithDebug(debug),
 		treemanager.WithShutdownTimeout(defaultShutdownTime),
 		treemanager.WithUnix(skt),
+		treemanager.WithStorageDriver(store),
 	)
 
 	defer func() {

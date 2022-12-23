@@ -12,6 +12,7 @@ import (
 	apiv1 "github.com/infratographer/fertilesoil/api/v1"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/common"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/treemanager"
+	"github.com/infratographer/fertilesoil/notifier/noop"
 	"github.com/infratographer/fertilesoil/storage/memory"
 	integration "github.com/infratographer/fertilesoil/tests/integration"
 	testutils "github.com/infratographer/fertilesoil/tests/utils"
@@ -39,6 +40,7 @@ func newTestServer(t *testing.T, skt string) *common.Server {
 		treemanager.WithShutdownTimeout(defaultShutdownTime),
 		treemanager.WithUnix(skt),
 		treemanager.WithStorageDriver(memory.NewDirectoryDriver()),
+		treemanager.WithNotifier(noop.NewNotifier()),
 	)
 
 	return tm

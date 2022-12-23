@@ -20,6 +20,7 @@ import (
 	"github.com/infratographer/fertilesoil/internal/httpsrv/treemanager"
 	"github.com/infratographer/fertilesoil/notifier/nats"
 	natsutils "github.com/infratographer/fertilesoil/notifier/nats/utils"
+	"github.com/infratographer/fertilesoil/storage/crdb/driver"
 	dbutils "github.com/infratographer/fertilesoil/storage/crdb/utils"
 )
 
@@ -64,14 +65,6 @@ func init() {
 		treemanager.DefaultTreeManagerUnix,
 		"Listen on a unix socket instead of a TCP socket.")
 	viperx.MustBindFlag(v, "server.unix_socket", flags.Lookup("server-unix-socket"))
-
-	// read-only mode
-	flags.Bool("read-only", treemanager.DefaultTreeManagerReadOnly, "Run the server in read-only mode.")
-	viperx.MustBindFlag(v, "server.read_only", flags.Lookup("read-only"))
-
-	// fast reads
-	flags.Bool("fast-reads", treemanager.DefaultTreeManagerFastReads, "Run the server in fast reads mode.")
-	viperx.MustBindFlag(v, "server.fast_reads", flags.Lookup("fast-reads"))
 }
 
 func serverRunE(cmd *cobra.Command, args []string) error {
@@ -109,16 +102,17 @@ func serverRunE(cmd *cobra.Command, args []string) error {
 		return notiferr
 	}
 
+	store := driver.NewDirectoryDriver(db, dbutils.WithStorageOptions(v)...)
+
 	s := treemanager.NewServer(
 		l,
 		db,
 		treemanager.WithListen(v.GetString("server.listen")),
 		treemanager.WithUnix(v.GetString("server.unix_socket")),
 		treemanager.WithDebug(v.GetBool("debug")),
-		treemanager.WithReadOnly(v.GetBool("server.read_only")),
-		treemanager.WithFastReads(v.GetBool("server.fast_reads")),
 		treemanager.WithShutdownTimeout(v.GetDuration("server.shutdown")),
 		treemanager.WithNotifier(notif),
+		treemanager.WithStorageDriver(store),
 	)
 
 	go func() {

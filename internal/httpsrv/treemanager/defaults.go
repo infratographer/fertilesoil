@@ -13,10 +13,6 @@ const (
 	DefaultTreeManagerUnix = ""
 	// DefaultTreeManagerDebug is the default debug flag for the TreeManager.
 	DefaultTreeManagerDebug = false
-	// DefaultTreeManagerReadOnly is the default read-only flag for the TreeManager.
-	DefaultTreeManagerReadOnly = false
-	// DefaultTreeManagerFastReads is the default fast reads flag for the TreeManager.
-	DefaultTreeManagerFastReads = false
 	// DefaultTreeManagerShutdownTimeout is the default shutdown timeout for the TreeManager.
 	DefaultTreeManagerShutdownTimeout = 5 * time.Second
 )
