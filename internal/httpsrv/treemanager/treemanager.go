@@ -12,7 +12,6 @@ import (
 	v1 "github.com/infratographer/fertilesoil/api/v1"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/common"
 	"github.com/infratographer/fertilesoil/storage"
-	"github.com/infratographer/fertilesoil/storage/crdb/driver"
 	sn "github.com/infratographer/fertilesoil/storage/notifier"
 )
 
@@ -25,21 +24,12 @@ func NewServer(
 		listen:          DefaultTreeManagerListen,
 		unix:            DefaultTreeManagerUnix,
 		debug:           DefaultTreeManagerDebug,
-		readonly:        DefaultTreeManagerReadOnly,
-		fastReads:       DefaultTreeManagerFastReads,
 		shutdownTimeout: DefaultTreeManagerShutdownTimeout,
 		notif:           DefaultTreeManagerNotifier,
 	}
 	cfg.apply(opts...)
 
-	var dbdrv storage.DirectoryAdmin
-	if cfg.storageDriver == nil {
-		dbdrv = driver.NewDirectoryDriver(db, cfg.withStorageDriverOptions()...)
-	} else {
-		dbdrv = cfg.storageDriver
-	}
-
-	store := sn.StorageWithNotifier(dbdrv, cfg.notif, sn.WithNotifyRetrier())
+	store := sn.StorageWithNotifier(cfg.storageDriver, cfg.notif, sn.WithNotifyRetrier())
 
 	s := common.NewServer(logger, cfg.listen, db, store, cfg.debug, cfg.shutdownTimeout, cfg.unix)
 

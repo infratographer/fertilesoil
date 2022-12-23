@@ -19,6 +19,7 @@ import (
 	"github.com/infratographer/fertilesoil/internal/httpsrv/common"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/treemanager"
 	"github.com/infratographer/fertilesoil/notifier"
+	"github.com/infratographer/fertilesoil/storage/crdb/driver"
 	dbutils "github.com/infratographer/fertilesoil/storage/crdb/utils"
 )
 
@@ -70,6 +71,8 @@ func newTestServerWithNotifier(t *testing.T, skt string, notif notifier.Notifier
 
 	gooseDBMutex.Unlock()
 
+	store := driver.NewDirectoryDriver(dbconn)
+
 	tm := treemanager.NewServer(
 		tl,
 		dbconn,
@@ -78,6 +81,7 @@ func newTestServerWithNotifier(t *testing.T, skt string, notif notifier.Notifier
 		treemanager.WithShutdownTimeout(defaultShutdownTime),
 		treemanager.WithUnix(skt),
 		treemanager.WithNotifier(notif),
+		treemanager.WithStorageDriver(store),
 	)
 
 	return tm
