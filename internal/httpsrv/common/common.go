@@ -187,5 +187,9 @@ func (s *Server) versionHandler(c *gin.Context) {
 }
 
 func (s *Server) dbCheck(ctx context.Context) error {
+	if s.DB == nil {
+		return nil
+	}
+
 	return s.DB.PingContext(ctx)
 }

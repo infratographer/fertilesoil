@@ -2,16 +2,12 @@ package integration_test
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 	"net/url"
-	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
@@ -56,13 +52,6 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func newUnixsocketPath(t *testing.T) string {
-	t.Helper()
-	tmpdir := t.TempDir()
-	skt := filepath.Join(tmpdir, "skt")
-	return skt
-}
-
 func newTestServer(t *testing.T, skt string) *common.Server {
 	t.Helper()
 
@@ -92,38 +81,6 @@ func newTestServerWithNotifier(t *testing.T, skt string, notif notifier.Notifier
 	)
 
 	return tm
-}
-
-func newTestClient(t *testing.T, skt string) clientv1.HTTPRootClient {
-	t.Helper()
-
-	cfg := clientv1.NewClientConfig().WithManagerURL(baseServerAddress).WithUnixSocket(skt)
-	httpc := clientv1.NewHTTPRootClient(cfg)
-	return httpc
-}
-
-func runTestServer(t *testing.T, srv *common.Server) {
-	t.Helper()
-
-	err := srv.Run(context.Background())
-	assert.ErrorIs(t, err, http.ErrServerClosed, "unexpected error running server")
-}
-
-func waitForServer(t *testing.T, cli clientv1.HTTPClient) {
-	t.Helper()
-
-	err := backoff.Retry(func() error {
-		readyz, err := cli.DoRaw(context.Background(), http.MethodGet, "/readyz", nil)
-		if err != nil {
-			return err
-		}
-		defer readyz.Body.Close()
-		if readyz.StatusCode != http.StatusOK {
-			return fmt.Errorf("unexpected status code: %d", readyz.StatusCode)
-		}
-		return nil
-	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(5*time.Millisecond), 10))
-	assert.NoError(t, err, "error waiting for server to be ready")
 }
 
 func setupAppStorage(t *testing.T) appv1.AppStorage {
