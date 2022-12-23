@@ -31,7 +31,7 @@ func BuildNATSConnFromArgs(v *viper.Viper) (*nats.Conn, error) {
 		nats.Name("fertilesoil"),
 	}
 
-	opt, err := nats.NkeyOptionFromSeed(viper.GetString("nats-nkey"))
+	opt, err := nats.NkeyOptionFromSeed(v.GetString("nats.nkey"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to load nkey: %w", err)
 	}
