@@ -1,14 +1,9 @@
 package integration_test
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"net"
-	"net/http"
-	"strings"
 	"testing"
 	"time"
 
@@ -18,23 +13,25 @@ import (
 
 	apiv1 "github.com/infratographer/fertilesoil/api/v1"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/treemanager"
+	"github.com/infratographer/fertilesoil/tests/integration"
+	testutils "github.com/infratographer/fertilesoil/tests/utils"
 )
 
 func TestListNoRoots(t *testing.T) {
 	t.Parallel()
 
-	skt := newUnixsocketPath(t)
+	skt := testutils.NewUnixsocketPath(t)
 	srv := newTestServer(t, skt)
 	defer func() {
 		err := srv.Shutdown()
 		assert.NoError(t, err, "error shutting down server")
 	}()
 
-	go runTestServer(t, srv)
+	go testutils.RunTestServer(t, srv)
 
-	cli := newTestClient(t, skt)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress)
 
-	waitForServer(t, cli)
+	testutils.WaitForServer(t, cli)
 
 	rl, err := cli.ListRoots(context.Background())
 	assert.NoError(t, err, "error getting roots")
@@ -44,18 +41,18 @@ func TestListNoRoots(t *testing.T) {
 func TestListOneRoot(t *testing.T) {
 	t.Parallel()
 
-	skt := newUnixsocketPath(t)
+	skt := testutils.NewUnixsocketPath(t)
 	srv := newTestServer(t, skt)
 	defer func() {
 		err := srv.Shutdown()
 		assert.NoError(t, err, "error shutting down server")
 	}()
 
-	go runTestServer(t, srv)
+	go testutils.RunTestServer(t, srv)
 
-	cli := newTestClient(t, skt)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress)
 
-	waitForServer(t, cli)
+	testutils.WaitForServer(t, cli)
 
 	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
 		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
@@ -83,18 +80,18 @@ func TestListOneRoot(t *testing.T) {
 func TestListMultipleRoots(t *testing.T) {
 	t.Parallel()
 
-	skt := newUnixsocketPath(t)
+	skt := testutils.NewUnixsocketPath(t)
 	srv := newTestServer(t, skt)
 	defer func() {
 		err := srv.Shutdown()
 		assert.NoError(t, err, "error shutting down server")
 	}()
 
-	go runTestServer(t, srv)
+	go testutils.RunTestServer(t, srv)
 
-	cli := newTestClient(t, skt)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress)
 
-	waitForServer(t, cli)
+	testutils.WaitForServer(t, cli)
 
 	nroots := 10
 	for idx := 0; idx < nroots; idx++ {
@@ -116,18 +113,18 @@ func TestListMultipleRoots(t *testing.T) {
 func TestOneDirectory(t *testing.T) {
 	t.Parallel()
 
-	skt := newUnixsocketPath(t)
+	skt := testutils.NewUnixsocketPath(t)
 	srv := newTestServer(t, skt)
 	defer func() {
 		err := srv.Shutdown()
 		assert.NoError(t, err, "error shutting down server")
 	}()
 
-	go runTestServer(t, srv)
+	go testutils.RunTestServer(t, srv)
 
-	cli := newTestClient(t, skt)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress)
 
-	waitForServer(t, cli)
+	testutils.WaitForServer(t, cli)
 
 	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
 		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
@@ -176,18 +173,18 @@ Tree structure to test:
 func TestFullTree(t *testing.T) {
 	t.Parallel()
 
-	skt := newUnixsocketPath(t)
+	skt := testutils.NewUnixsocketPath(t)
 	srv := newTestServer(t, skt)
 	defer func() {
 		err := srv.Shutdown()
 		assert.NoError(t, err, "error shutting down server")
 	}()
 
-	go runTestServer(t, srv)
+	go testutils.RunTestServer(t, srv)
 
-	cli := newTestClient(t, skt)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress)
 
-	waitForServer(t, cli)
+	testutils.WaitForServer(t, cli)
 
 	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
 		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
@@ -285,61 +282,26 @@ func TestFullTree(t *testing.T) {
 func TestCreateRootWithMalformedData(t *testing.T) {
 	t.Parallel()
 
-	skt := newUnixsocketPath(t)
+	skt := testutils.NewUnixsocketPath(t)
 	srv := newTestServer(t, skt)
 	defer func() {
 		err := srv.Shutdown()
 		assert.NoError(t, err, "error shutting down server")
 	}()
 
-	go runTestServer(t, srv)
+	go testutils.RunTestServer(t, srv)
 
-	cli := newTestClient(t, skt)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress)
 
-	waitForServer(t, cli)
+	testutils.WaitForServer(t, cli)
 
-	c := &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", skt)
-			},
-		},
-	}
-
-	u := baseServerAddress.JoinPath("/api/v1/roots")
-
-	// Invalid request with valid JSON
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-
-	err := enc.Encode(map[string]string{"foo": "bar"})
-	assert.NoError(t, err, "error encoding data")
-
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, u.String(), &buf)
-	assert.NoError(t, err, "error creating request")
-
-	resp, err := c.Do(req)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
-
-	// invalid request with invalid JSON
-	buf.Reset()
-	buf.WriteString("{\"foo")
-
-	req, err = http.NewRequestWithContext(context.Background(), http.MethodPost, u.String(), &buf)
-	assert.NoError(t, err, "error creating request")
-
-	resp, err = c.Do(req)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
+	integration.MalformedDataTest(t, skt, baseServerAddress)
 }
 
 func TestServerWithBadDB(t *testing.T) {
 	t.Parallel()
 
-	skt := newUnixsocketPath(t)
+	skt := testutils.NewUnixsocketPath(t)
 
 	tl, err := zap.NewDevelopment()
 	assert.NoError(t, err, "error creating logger")
@@ -362,9 +324,9 @@ func TestServerWithBadDB(t *testing.T) {
 		assert.NoError(t, err, "error shutting down server")
 	}()
 
-	go runTestServer(t, srv)
+	go testutils.RunTestServer(t, srv)
 
-	cli := newTestClient(t, skt)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress)
 
 	t.Log("waiting for server to start. This uses a timer as the database is not set up.")
 	time.Sleep(1 * time.Second)
@@ -405,177 +367,56 @@ func TestServerWithBadDB(t *testing.T) {
 func TestInvalidDirectoryIDs(t *testing.T) {
 	t.Parallel()
 
-	skt := newUnixsocketPath(t)
+	skt := testutils.NewUnixsocketPath(t)
 	srv := newTestServer(t, skt)
 	defer func() {
 		err := srv.Shutdown()
 		assert.NoError(t, err, "error shutting down server")
 	}()
 
-	go runTestServer(t, srv)
+	go testutils.RunTestServer(t, srv)
 
-	cli := newTestClient(t, skt)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress)
 
-	waitForServer(t, cli)
+	testutils.WaitForServer(t, cli)
 
-	// Create a root directory
-	root, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "root",
-	})
-	assert.NoError(t, err, "error creating root directory")
-
-	// Create a child directory
-	child, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "child",
-	}, root.Directory.ID)
-	assert.NoError(t, err, "error creating child directory")
-
-	// some string
-	resp, err := cli.DoRaw(context.Background(), http.MethodGet, "/api/v1/directories/invalid", nil)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
-
-	// some string getting children
-	resp, err = cli.DoRaw(context.Background(), http.MethodGet, "/api/v1/directories/invalid/children", nil)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
-
-	// some string getting parents
-	resp, err = cli.DoRaw(context.Background(), http.MethodGet, "/api/v1/directories/invalid/parents", nil)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
-
-	// some string getting parents until
-	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
-		"/api/v1/directories/invalid/parents/00000000-0000-0000-0000-000000000000", nil)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
-
-	// a valid child with an invalid parent
-	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
-		fmt.Sprintf("/api/v1/directories/%s/parents/invalid", child.Directory.ID),
-		nil)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
-
-	// almost valid UUID
-	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
-		"/api/v1/directories/00000000-0000-0000-0000-00000000XXX/children", nil)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
-
-	// crazy long string
-	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
-		fmt.Sprintf("/api/v1/directories/%s/children", strings.Repeat("a", 1000)), nil)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
-
-	// SQL injection through DirectoryID
-	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
-		"/api/v1/directories/00000000-0000-0000-0000-000000000000; DROP TABLE directories", nil)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
-
-	// SQL injection through DirectoryID (using valid root ID)
-	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
-		fmt.Sprintf("/api/v1/directories/%s; DROP TABLE directories", root.Directory.ID),
-		nil)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
+	integration.InvalidDirectoryIDsTest(t, cli)
 }
 
 func TestCreateErroneousDirectory(t *testing.T) {
 	t.Parallel()
 
-	skt := newUnixsocketPath(t)
+	skt := testutils.NewUnixsocketPath(t)
 	srv := newTestServer(t, skt)
 	defer func() {
 		err := srv.Shutdown()
 		assert.NoError(t, err, "error shutting down server")
 	}()
 
-	go runTestServer(t, srv)
+	go testutils.RunTestServer(t, srv)
 
-	cli := newTestClient(t, skt)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress)
 
-	waitForServer(t, cli)
+	testutils.WaitForServer(t, cli)
 
-	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "root",
-	})
-	assert.NoError(t, err, "error creating root")
+	integration.ErroneousDirectoryTest(t, cli)
+}
 
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
+func TestDirectoryNotFound(t *testing.T) {
+	t.Parallel()
 
-	err = enc.Encode(&apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "child",
-	})
-	assert.NoError(t, err, "error encoding data")
+	skt := testutils.NewUnixsocketPath(t)
+	srv := newTestServer(t, skt)
+	defer func() {
+		err := srv.Shutdown()
+		assert.NoError(t, err, "error shutting down server")
+	}()
 
-	// Creating directory with invalid parent
-	resp, err := cli.DoRaw(context.Background(), http.MethodPost,
-		"/api/v1/directories/invalid", &buf)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
+	go testutils.RunTestServer(t, srv)
 
-	// creating directory with null request
-	resp, err = cli.DoRaw(context.Background(), http.MethodPost,
-		fmt.Sprintf("/api/v1/directories/%s", rd.Directory.ID), nil)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
+	cli := testutils.NewTestClient(t, skt, baseServerAddress)
 
-	// creating directory with invalid request
-	resp, err = cli.DoRaw(context.Background(), http.MethodPost,
-		fmt.Sprintf("/api/v1/directories/%s", rd.Directory.ID), bytes.NewBufferString("invalid"))
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
+	testutils.WaitForServer(t, cli)
 
-	// creating directory with invalid request (no name)
-	buf.Reset()
-	err = enc.Encode(&apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-	})
-	assert.NoError(t, err, "error encoding data")
-	resp, err = cli.DoRaw(context.Background(), http.MethodPost,
-		fmt.Sprintf("/api/v1/directories/%s", rd.Directory.ID), &buf)
-	assert.NoError(t, err, "error sending request")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
-	resp.Body.Close()
-
-	// creating directory with parent that doesn't exist
-	nodir, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "nodir",
-	}, apiv1.DirectoryID(uuid.New()))
-	assert.Error(t, err, "should have errored creating directory")
-	assert.Nil(t, nodir, "directory should be nil")
+	integration.DirectoryNotFoundTest(t, cli)
 }

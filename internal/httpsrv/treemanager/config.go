@@ -5,6 +5,7 @@ import (
 
 	"github.com/infratographer/fertilesoil/notifier"
 	"github.com/infratographer/fertilesoil/notifier/noop"
+	"github.com/infratographer/fertilesoil/storage"
 	"github.com/infratographer/fertilesoil/storage/crdb/driver"
 )
 
@@ -16,6 +17,7 @@ type treeManagerConfig struct {
 	fastReads       bool
 	shutdownTimeout time.Duration
 	notif           notifier.Notifier
+	storageDriver   storage.DirectoryAdmin
 }
 
 type Option func(*treeManagerConfig)
@@ -79,6 +81,13 @@ func WithNotifier(n notifier.Notifier) Option {
 			n = noop.NewNotifier()
 		}
 		c.notif = n
+	}
+}
+
+// WithStorageDriver sets the storage driver for the server.
+func WithStorageDriver(d storage.DirectoryAdmin) Option {
+	return func(c *treeManagerConfig) {
+		c.storageDriver = d
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 	clientv1nats "github.com/infratographer/fertilesoil/client/v1/nats"
 	"github.com/infratographer/fertilesoil/notifier/nats"
 	natsutils "github.com/infratographer/fertilesoil/notifier/nats/utils"
+	testutils "github.com/infratographer/fertilesoil/tests/utils"
 )
 
 // This scenario tests the following:
@@ -24,7 +25,7 @@ func TestAppReconcileAndWatch(t *testing.T) {
 	t.Parallel()
 
 	// initialize socket to communicate with the tree manager
-	skt := newUnixsocketPath(t)
+	skt := testutils.NewUnixsocketPath(t)
 
 	// initialize NATS server for notifications
 	natss, natserr := natsutils.StartNatsServer()
@@ -54,11 +55,11 @@ func TestAppReconcileAndWatch(t *testing.T) {
 		assert.NoError(t, err, "error shutting down server")
 	}()
 
-	go runTestServer(t, srv)
+	go testutils.RunTestServer(t, srv)
 
-	cli := newTestClient(t, skt)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress)
 
-	waitForServer(t, cli)
+	testutils.WaitForServer(t, cli)
 
 	// initialize root. An app needs a root to be initialized
 	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{

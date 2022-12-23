@@ -32,7 +32,12 @@ func NewServer(
 	}
 	cfg.apply(opts...)
 
-	dbdrv := driver.NewDirectoryDriver(db, cfg.withStorageDriverOptions()...)
+	var dbdrv storage.DirectoryAdmin
+	if cfg.storageDriver == nil {
+		dbdrv = driver.NewDirectoryDriver(db, cfg.withStorageDriverOptions()...)
+	} else {
+		dbdrv = cfg.storageDriver
+	}
 
 	store := sn.StorageWithNotifier(dbdrv, cfg.notif, sn.WithNotifyRetrier())
 
