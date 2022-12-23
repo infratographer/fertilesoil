@@ -7,6 +7,7 @@ package memory
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/google/uuid"
@@ -15,13 +16,32 @@ import (
 	"github.com/infratographer/fertilesoil/storage"
 )
 
+type Options func(*Driver)
+
 type Driver struct {
 	// dirMap is a thread-safe map of directories.
-	dirMap sync.Map
+	dirMap *sync.Map
 }
 
-func NewDirectoryDriver() *Driver {
-	return &Driver{}
+// WithDirectoryMap allows to set a custom directory map.
+// This is useful for testing, since it allows to inject a custom
+// map and further modify it in the test.
+func WithDirectoryMap(dirMap *sync.Map) Options {
+	return func(d *Driver) {
+		d.dirMap = dirMap
+	}
+}
+
+func NewDirectoryDriver(opts ...Options) *Driver {
+	d := &Driver{
+		dirMap: &sync.Map{},
+	}
+
+	for _, opt := range opts {
+		opt(d)
+	}
+
+	return d
 }
 
 var _ storage.DirectoryAdmin = (*Driver)(nil)
@@ -44,7 +64,7 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 
 	dir, ok := rawdir.(*v1.Directory)
 	if !ok {
-		panic("invalid type in dirMap")
+		return nil, fmt.Errorf("directory %s is not of type *v1.Directory", d.ID)
 	}
 
 	return dir, nil
@@ -54,10 +74,13 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 func (t *Driver) ListRoots(ctx context.Context) ([]v1.DirectoryID, error) {
 	var roots []v1.DirectoryID
 
+	var iterationErr error
+
 	t.dirMap.Range(func(key, value interface{}) bool {
 		dir, ok := value.(*v1.Directory)
 		if !ok {
-			panic("invalid type in dirMap")
+			iterationErr = fmt.Errorf("found directory that is not of type *v1.Directory")
+			return false
 		}
 
 		if dir.Parent == nil {
@@ -66,6 +89,10 @@ func (t *Driver) ListRoots(ctx context.Context) ([]v1.DirectoryID, error) {
 
 		return true
 	})
+
+	if iterationErr != nil {
+		return nil, iterationErr
+	}
 
 	return roots, nil
 }
@@ -87,7 +114,7 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 
 	dir, ok := rawdir.(*v1.Directory)
 	if !ok {
-		panic("invalid type in dirMap")
+		return nil, fmt.Errorf("directory %s is not of type *v1.Directory", d.ID)
 	}
 
 	return dir, nil
@@ -108,7 +135,7 @@ func (t *Driver) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.Direc
 
 	dir, ok := rawdir.(*v1.Directory)
 	if !ok {
-		panic("invalid type in dirMap")
+		return nil, fmt.Errorf("directory %s is not of type *v1.Directory", id)
 	}
 
 	return dir, nil
@@ -175,10 +202,13 @@ func (t *Driver) GetParentsUntilAncestor(
 func (t *Driver) GetChildren(ctx context.Context, id v1.DirectoryID) ([]v1.DirectoryID, error) {
 	var children []v1.DirectoryID
 
+	var iterationErr error
+
 	t.dirMap.Range(func(key, value interface{}) bool {
 		dir, ok := value.(*v1.Directory)
 		if !ok {
-			panic("invalid type in dirMap")
+			iterationErr = fmt.Errorf("found directory that is not of type *v1.Directory")
+			return false
 		}
 
 		if dir.Parent != nil && *dir.Parent == id {
@@ -187,6 +217,10 @@ func (t *Driver) GetChildren(ctx context.Context, id v1.DirectoryID) ([]v1.Direc
 
 		return true
 	})
+
+	if iterationErr != nil {
+		return nil, iterationErr
+	}
 
 	if len(children) == 0 {
 		return children, nil
