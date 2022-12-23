@@ -5,15 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
 	v1 "github.com/infratographer/fertilesoil/api/v1"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/common"
-	"github.com/infratographer/fertilesoil/notifier"
-	"github.com/infratographer/fertilesoil/notifier/noop"
 	"github.com/infratographer/fertilesoil/storage"
 	"github.com/infratographer/fertilesoil/storage/crdb/driver"
 	sn "github.com/infratographer/fertilesoil/storage/notifier"
@@ -21,25 +18,25 @@ import (
 
 func NewServer(
 	logger *zap.Logger,
-	listen string,
 	db *sql.DB,
-	debug bool,
-	shutdownTime time.Duration,
-	unix string,
-	n notifier.Notifier,
+	opts ...Option,
 ) *common.Server {
-	dbdrv := driver.NewDirectoryDriver(db)
-
-	var notif notifier.Notifier
-
-	if n == nil {
-		notif = noop.NewNotifier()
-	} else {
-		notif = n
+	cfg := &treeManagerConfig{
+		listen:          DefaultTreeManagerListen,
+		unix:            DefaultTreeManagerUnix,
+		debug:           DefaultTreeManagerDebug,
+		readonly:        DefaultTreeManagerReadOnly,
+		fastReads:       DefaultTreeManagerFastReads,
+		shutdownTimeout: DefaultTreeManagerShutdownTimeout,
+		notif:           DefaultTreeManagerNotifier,
 	}
+	cfg.apply(opts...)
 
-	store := sn.StorageWithNotifier(dbdrv, notif, sn.WithNotifyRetrier())
-	s := common.NewServer(logger, listen, db, store, debug, shutdownTime, unix)
+	dbdrv := driver.NewDirectoryDriver(db, cfg.withStorageDriverOptions()...)
+
+	store := sn.StorageWithNotifier(dbdrv, cfg.notif, sn.WithNotifyRetrier())
+
+	s := common.NewServer(logger, cfg.listen, db, store, cfg.debug, cfg.shutdownTimeout, cfg.unix)
 
 	s.SetHandler(newHandler(logger, s))
 
