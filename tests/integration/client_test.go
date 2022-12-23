@@ -348,7 +348,14 @@ func TestServerWithBadDB(t *testing.T) {
 	dbconn, err := sql.Open("postgres", baseDBURL.String())
 	assert.NoError(t, err, "error creating db connection")
 
-	srv := treemanager.NewServer(tl, srvhost, dbconn, debug, defaultShutdownTime, skt, nil)
+	srv := treemanager.NewServer(
+		tl,
+		dbconn,
+		treemanager.WithListen(srvhost),
+		treemanager.WithDebug(debug),
+		treemanager.WithShutdownTimeout(defaultShutdownTime),
+		treemanager.WithUnix(skt),
+	)
 
 	defer func() {
 		err := srv.Shutdown()

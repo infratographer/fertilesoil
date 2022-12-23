@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -22,11 +21,6 @@ import (
 	"github.com/infratographer/fertilesoil/notifier/nats"
 	natsutils "github.com/infratographer/fertilesoil/notifier/nats/utils"
 	dbutils "github.com/infratographer/fertilesoil/storage/crdb/utils"
-)
-
-const (
-	defaultListen                = ":8080"
-	defaultServerShutdownTimeout = 5 * time.Second
 )
 
 // serveCmd represents the treemanager command.
@@ -48,18 +42,36 @@ func init() {
 
 	v := viper.GetViper()
 	dbutils.RegisterDBArgs(v, serveCmd.Flags())
-	ginx.MustViperFlags(v, serveCmd.Flags(), defaultListen)
+	ginx.MustViperFlags(v, serveCmd.Flags(), treemanager.DefaultTreeManagerListen)
 	loggingx.MustViperFlags(v, serveCmd.Flags())
 	natsutils.RegisterNATSArgs(v, serveCmd.Flags())
 
+	// TODO(jaosorior): Add tracing
+	// TODO(jaosorior): Add metrics
+	// TODO(jaosorior): Add TLS flags
+
 	// Server flags
 	flags := serveCmd.Flags()
+
+	// server shutdown timeout
 	flags.Duration("server-shutdown-timeout",
-		defaultServerShutdownTimeout,
+		treemanager.DefaultTreeManagerShutdownTimeout,
 		"Time to wait for the server to shutdown gracefully")
 	viperx.MustBindFlag(v, "server.shutdown", flags.Lookup("server-shutdown-timeout"))
-	flags.String("server-unix-socket", "", "Listen on a unix socket instead of a TCP socket.")
+
+	// server UNIX socket
+	flags.String("server-unix-socket",
+		treemanager.DefaultTreeManagerUnix,
+		"Listen on a unix socket instead of a TCP socket.")
 	viperx.MustBindFlag(v, "server.unix_socket", flags.Lookup("server-unix-socket"))
+
+	// read-only mode
+	flags.Bool("read-only", treemanager.DefaultTreeManagerReadOnly, "Run the server in read-only mode.")
+	viperx.MustBindFlag(v, "server.read_only", flags.Lookup("read-only"))
+
+	// fast reads
+	flags.Bool("fast-reads", treemanager.DefaultTreeManagerFastReads, "Run the server in fast reads mode.")
+	viperx.MustBindFlag(v, "server.fast_reads", flags.Lookup("fast-reads"))
 }
 
 func serverRunE(cmd *cobra.Command, args []string) error {
@@ -99,12 +111,14 @@ func serverRunE(cmd *cobra.Command, args []string) error {
 
 	s := treemanager.NewServer(
 		l,
-		viper.GetString("listen"),
 		db,
-		viper.GetBool("debug"),
-		viper.GetDuration("server.shutdown"),
-		viper.GetString("server.unix_socket"),
-		notif,
+		treemanager.WithListen(v.GetString("server.listen")),
+		treemanager.WithUnix(v.GetString("server.unix_socket")),
+		treemanager.WithDebug(v.GetBool("debug")),
+		treemanager.WithReadOnly(v.GetBool("server.read_only")),
+		treemanager.WithFastReads(v.GetBool("server.fast_reads")),
+		treemanager.WithShutdownTimeout(v.GetDuration("server.shutdown")),
+		treemanager.WithNotifier(notif),
 	)
 
 	go func() {

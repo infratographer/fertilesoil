@@ -81,7 +81,15 @@ func newTestServerWithNotifier(t *testing.T, skt string, notif notifier.Notifier
 
 	gooseDBMutex.Unlock()
 
-	tm := treemanager.NewServer(tl, srvhost, dbconn, debug, defaultShutdownTime, skt, notif)
+	tm := treemanager.NewServer(
+		tl,
+		dbconn,
+		treemanager.WithListen(srvhost),
+		treemanager.WithDebug(debug),
+		treemanager.WithShutdownTimeout(defaultShutdownTime),
+		treemanager.WithUnix(skt),
+		treemanager.WithNotifier(notif),
+	)
 
 	return tm
 }
