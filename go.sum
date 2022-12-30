@@ -61,6 +61,8 @@ github.com/cockroachdb/apd v1.1.0 h1:3LFP3629v+1aKXU5Q37mxmRxX/pIu1nijXydLShEq5I
 github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMeY4+DwBQ=
 github.com/cockroachdb/cockroach-go/v2 v2.2.19 h1:YIHyz17jZumBeXPuoZKq/0nrITsqDoDD8/KQt3/xiyc=
 github.com/cockroachdb/cockroach-go/v2 v2.2.19/go.mod h1:mzlIDDBALQfEjv/7DU12fb2AfQ/MUYTlychcMpWp9QI=
+github.com/cockroachdb/cockroach-go/v2 v2.2.20 h1:TLSzwdTdIwgsbdApHzaxunhSMrmbGf5YY6oxtaP2kvw=
+github.com/cockroachdb/cockroach-go/v2 v2.2.20/go.mod h1:73vQi5H/H7kE8SgOt+XA6729Tubvj5hxKIEgbQQhp4c=
 github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e/go.mod h1:F5haX7vjVVG0kc13fIWeqUViNPyEJxv/OmvnBo0Yme4=
 github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f/go.mod h1:F5haX7vjVVG0kc13fIWeqUViNPyEJxv/OmvnBo0Yme4=
 github.com/cpuguy83/go-md2man/v2 v2.0.2/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
