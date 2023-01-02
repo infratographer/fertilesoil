@@ -1,6 +1,8 @@
 Applications
 ============
 
+An application is any program that interfaces with the directory tree.
+
 Normally, applications are to abide by the following rules:
 
 - They must scope their resources to a specific node in the tree.
