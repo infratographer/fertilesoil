@@ -1,4 +1,4 @@
-FROM docker.io/library/golang:1.19 as build-env
+FROM cgr.dev/chainguard/go:1.19 as build-env
 
 WORKDIR /go/src/fertilesoil
 
@@ -10,7 +10,7 @@ COPY . .
 
 RUN CGO_ENABLED=0 go build -o /go/bin/treeman main.go 
 
-FROM gcr.io/distroless/static:nonroot
+FROM cgr.dev/chainguard/static:latest
 
 # `nonroot` coming from distroless
 USER 65532:65532
