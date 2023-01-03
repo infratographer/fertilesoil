@@ -44,3 +44,37 @@ jobs:
           file: ./coverage.out
           flags: unittests
           name: codecov-umbrella
+
+  build-image:
+    name: build-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v3
+
+      - name: Build
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./images/treeman/Dockerfile
+          push: false
+          load: true
+          tags: ghcr.io/infratographer/fertilesoil/treeman:latest
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/infratographer/fertilesoil/treeman:latest
+          security-checks: 'vuln,config,secret'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Inspect action SARIF report
+        run: cat 'trivy-results.sarif'
