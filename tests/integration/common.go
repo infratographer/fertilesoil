@@ -65,20 +65,16 @@ func MalformedDataTest(t *testing.T, skt string, baseServerAddress *url.URL) {
 func InvalidDirectoryIDsTest(t *testing.T, cli clientv1.HTTPRootClient) {
 	// Create a root directory
 	root, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "root",
+		Version: apiv1.APIVersion,
+		Name:    "root",
 	})
 	assert.NoError(t, err, "error creating root directory")
 
 	// Create a child directory
 	child, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "child",
-	}, root.Directory.ID)
+		Version: apiv1.APIVersion,
+		Name:    "child",
+	}, root.Directory.Id)
 	assert.NoError(t, err, "error creating child directory")
 
 	// some string
@@ -108,7 +104,7 @@ func InvalidDirectoryIDsTest(t *testing.T, cli clientv1.HTTPRootClient) {
 
 	// a valid child with an invalid parent
 	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
-		fmt.Sprintf("/api/v1/directories/%s/parents/invalid", child.Directory.ID),
+		fmt.Sprintf("/api/v1/directories/%s/parents/invalid", child.Directory.Id),
 		nil)
 	assert.NoError(t, err, "error sending request")
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
@@ -138,7 +134,7 @@ func InvalidDirectoryIDsTest(t *testing.T, cli clientv1.HTTPRootClient) {
 
 	// SQL injection through DirectoryID (using valid root ID)
 	resp, err = cli.DoRaw(context.Background(), http.MethodGet,
-		fmt.Sprintf("/api/v1/directories/%s; DROP TABLE directories", root.Directory.ID),
+		fmt.Sprintf("/api/v1/directories/%s; DROP TABLE directories", root.Directory.Id),
 		nil)
 	assert.NoError(t, err, "error sending request")
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
@@ -148,10 +144,8 @@ func InvalidDirectoryIDsTest(t *testing.T, cli clientv1.HTTPRootClient) {
 //nolint:thelper // In this case, we don't want to use t.Helper() because we want to see the line number of the caller.
 func ErroneousDirectoryTest(t *testing.T, cli clientv1.HTTPRootClient) {
 	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "root",
+		Version: apiv1.APIVersion,
+		Name:    "root",
 	})
 	assert.NoError(t, err, "error creating root")
 
@@ -159,10 +153,8 @@ func ErroneousDirectoryTest(t *testing.T, cli clientv1.HTTPRootClient) {
 	enc := json.NewEncoder(&buf)
 
 	err = enc.Encode(&apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "child",
+		Version: apiv1.APIVersion,
+		Name:    "child",
 	})
 	assert.NoError(t, err, "error encoding data")
 
@@ -175,14 +167,14 @@ func ErroneousDirectoryTest(t *testing.T, cli clientv1.HTTPRootClient) {
 
 	// creating directory with null request
 	resp, err = cli.DoRaw(context.Background(), http.MethodPost,
-		fmt.Sprintf("/api/v1/directories/%s", rd.Directory.ID), nil)
+		fmt.Sprintf("/api/v1/directories/%s", rd.Directory.Id), nil)
 	assert.NoError(t, err, "error sending request")
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
 	resp.Body.Close()
 
 	// creating directory with invalid request
 	resp, err = cli.DoRaw(context.Background(), http.MethodPost,
-		fmt.Sprintf("/api/v1/directories/%s", rd.Directory.ID), bytes.NewBufferString("invalid"))
+		fmt.Sprintf("/api/v1/directories/%s", rd.Directory.Id), bytes.NewBufferString("invalid"))
 	assert.NoError(t, err, "error sending request")
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
 	resp.Body.Close()
@@ -190,23 +182,19 @@ func ErroneousDirectoryTest(t *testing.T, cli clientv1.HTTPRootClient) {
 	// creating directory with invalid request (no name)
 	buf.Reset()
 	err = enc.Encode(&apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
+		Version: apiv1.APIVersion,
 	})
 	assert.NoError(t, err, "error encoding data")
 	resp, err = cli.DoRaw(context.Background(), http.MethodPost,
-		fmt.Sprintf("/api/v1/directories/%s", rd.Directory.ID), &buf)
+		fmt.Sprintf("/api/v1/directories/%s", rd.Directory.Id), &buf)
 	assert.NoError(t, err, "error sending request")
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
 	resp.Body.Close()
 
 	// creating directory with parent that doesn't exist
 	nodir, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "nodir",
+		Version: apiv1.APIVersion,
+		Name:    "nodir",
 	}, apiv1.DirectoryID(uuid.New()))
 	assert.Error(t, err, "should have errored creating directory")
 	assert.Nil(t, nodir, "directory should be nil")

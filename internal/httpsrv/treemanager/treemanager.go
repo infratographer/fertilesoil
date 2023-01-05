@@ -77,9 +77,7 @@ func listRoots(s *common.Server) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, &v1.DirectoryList{
-			DirectoryRequestMeta: v1.DirectoryRequestMeta{
-				Version: v1.APIVersion,
-			},
+			Version:     v1.APIVersion,
 			Directories: roots,
 		})
 	}
@@ -106,9 +104,7 @@ func createRootDirectory(s *common.Server) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusCreated, &v1.DirectoryFetch{
-			DirectoryRequestMeta: v1.DirectoryRequestMeta{
-				Version: v1.APIVersion,
-			},
+			Version:   v1.APIVersion,
 			Directory: *rd,
 		})
 	}
@@ -125,9 +121,7 @@ func getDirectory(s *common.Server) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, &v1.DirectoryFetch{
-			DirectoryRequestMeta: v1.DirectoryRequestMeta{
-				Version: v1.APIVersion,
-			},
+			Version:   v1.APIVersion,
 			Directory: *dir,
 		})
 	}
@@ -166,7 +160,7 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
-		parentID := parent.ID
+		parentID := parent.Id
 		d := v1.Directory{
 			Name:     req.Name,
 			Metadata: req.Metadata,
@@ -183,9 +177,7 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusCreated, &v1.DirectoryFetch{
-			DirectoryRequestMeta: v1.DirectoryRequestMeta{
-				Version: v1.APIVersion,
-			},
+			Version:   v1.APIVersion,
 			Directory: *rd,
 		})
 	}
@@ -201,7 +193,7 @@ func listChildren(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
-		children, err := s.T.GetChildren(c, dir.ID)
+		children, err := s.T.GetChildren(c, dir.Id)
 		if err != nil {
 			s.L.Error("error listing children", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -211,9 +203,7 @@ func listChildren(s *common.Server) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, &v1.DirectoryList{
-			DirectoryRequestMeta: v1.DirectoryRequestMeta{
-				Version: v1.APIVersion,
-			},
+			Version:     v1.APIVersion,
 			Directories: children,
 		})
 	}
@@ -229,7 +219,7 @@ func listParents(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
-		parents, err := s.T.GetParents(c, dir.ID)
+		parents, err := s.T.GetParents(c, dir.Id)
 		if err != nil {
 			s.L.Error("error listing parents", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -239,9 +229,7 @@ func listParents(s *common.Server) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, &v1.DirectoryList{
-			DirectoryRequestMeta: v1.DirectoryRequestMeta{
-				Version: v1.APIVersion,
-			},
+			Version:     v1.APIVersion,
 			Directories: parents,
 		})
 	}
@@ -265,7 +253,7 @@ func listParentsUntil(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
-		parents, err := s.T.GetParentsUntilAncestor(c, dir.ID, untildir.ID)
+		parents, err := s.T.GetParentsUntilAncestor(c, dir.Id, untildir.Id)
 		if err != nil {
 			s.L.Error("error listing parents", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, gin.H{

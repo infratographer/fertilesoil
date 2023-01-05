@@ -12,6 +12,9 @@ CONTAINER_REPO?=ghcr.io/infratographer/fertilesoil
 TREEMAN_CONTAINER_IMAGE_NAME = $(CONTAINER_REPO)/treeman
 CONTAINER_TAG?=latest
 
+# OpenAPI settings
+OAPI_CODEGEN_CMD?=go run github.com/deepmap/oapi-codegen/cmd/oapi-codegen
+
 ## Targets
 
 .PHONY: build
@@ -50,6 +53,26 @@ image: treeman-image
 
 treeman-image:
 	$(CONTAINER_BUILD_CMD) -f images/treeman/Dockerfile . -t $(TREEMAN_CONTAINER_IMAGE_NAME):$(CONTAINER_TAG)
+
+.PHONY: generate
+generate: openapi
+
+.PHONY: openapi
+openapi: openapi-types openapi-spec
+
+.PHONY: openapi-types
+openapi-types:
+	@echo Generating OpenAPI types...
+	@$(OAPI_CODEGEN_CMD) -package v1 \
+		-generate types \
+		-o api/v1/types.gen.go treeman-openapi-v1.yaml
+
+.PHONY: openapi-spec
+openapi-spec:
+	@echo Generating OpenAPI spec...
+	@$(OAPI_CODEGEN_CMD) -package v1 \
+		-generate spec \
+		-o api/v1/openapi.gen.go treeman-openapi-v1.yaml
 
 # Tools setup
 $(TOOLS_DIR):

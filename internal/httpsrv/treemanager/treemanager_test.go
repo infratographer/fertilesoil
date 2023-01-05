@@ -89,10 +89,8 @@ func TestRootOperations(t *testing.T) {
 
 	// Create a new root.
 	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "root",
+		Version: apiv1.APIVersion,
+		Name:    "root",
 	})
 	assert.NoError(t, err, "error creating root")
 	assert.NotNil(t, rd, "root directory is nil")
@@ -123,35 +121,31 @@ func TestDirectoryOperations(t *testing.T) {
 
 	// Create a new root.
 	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "root",
+		Version: apiv1.APIVersion,
+		Name:    "root",
 	})
 	assert.NoError(t, err, "error creating root")
 	assert.NotNil(t, rd, "root directory is nil")
 
 	// Create a new directory.
 	d, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "test",
-	}, rd.Directory.ID)
+		Version: apiv1.APIVersion,
+		Name:    "test",
+	}, rd.Directory.Id)
 	assert.NoError(t, err, "error creating directory")
 	assert.NotNil(t, d, "directory is nil")
 
 	// Get the directory.
-	retd, err := cli.GetDirectory(context.Background(), d.Directory.ID)
+	retd, err := cli.GetDirectory(context.Background(), d.Directory.Id)
 	assert.NoError(t, err, "error getting directory")
 	assert.NotNil(t, retd, "directory is nil")
 
 	// directory should be the same as the one we created.
-	assert.Equal(t, d.Directory.ID, retd.Directory.ID, "directory is not the same")
+	assert.Equal(t, d.Directory.Id, retd.Directory.Id, "directory is not the same")
 	assert.Equal(t, d.Directory.Name, retd.Directory.Name, "directory is not the same")
 
 	// List the directory.
-	listd, err := cli.GetChildren(context.Background(), rd.Directory.ID)
+	listd, err := cli.GetChildren(context.Background(), rd.Directory.Id)
 	assert.NoError(t, err, "error listing directories")
 	assert.NotNil(t, listd, "directory is nil")
 
@@ -159,7 +153,7 @@ func TestDirectoryOperations(t *testing.T) {
 	assert.Equal(t, 1, len(listd.Directories), "expected 1 directory, got %d", len(listd.Directories))
 
 	// Get the root as parent.
-	listrd, err := cli.GetParents(context.Background(), d.Directory.ID)
+	listrd, err := cli.GetParents(context.Background(), d.Directory.Id)
 	assert.NoError(t, err, "error listing directories")
 	assert.NotNil(t, listrd, "directory is nil")
 
@@ -167,10 +161,10 @@ func TestDirectoryOperations(t *testing.T) {
 	assert.Equal(t, 1, len(listrd.Directories), "expected 1 directory, got %d", len(listrd.Directories))
 
 	// The directory should be the parent.
-	assert.Equal(t, rd.Directory.ID, listrd.Directories[0], "directory is not the same")
+	assert.Equal(t, rd.Directory.Id, listrd.Directories[0], "directory is not the same")
 
 	// Get the root as parent with GetParentsUntil function
-	listrd, err = cli.GetParentsUntil(context.Background(), d.Directory.ID, rd.Directory.ID)
+	listrd, err = cli.GetParentsUntil(context.Background(), d.Directory.Id, rd.Directory.Id)
 	assert.NoError(t, err, "error listing directories")
 	assert.NotNil(t, listrd, "directory is nil")
 
@@ -178,7 +172,7 @@ func TestDirectoryOperations(t *testing.T) {
 	assert.Equal(t, 1, len(listrd.Directories), "expected 1 directory, got %d", len(listrd.Directories))
 
 	// The directory should be the parent.
-	assert.Equal(t, rd.Directory.ID, listrd.Directories[0], "directory is not the same")
+	assert.Equal(t, rd.Directory.Id, listrd.Directories[0], "directory is not the same")
 }
 
 func TestErroneousCalls(t *testing.T) {
@@ -333,10 +327,8 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 
 	// try to create a new directory with the bad root as parent.
 	nodir, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "test",
+		Version: apiv1.APIVersion,
+		Name:    "test",
 	}, id)
 	assert.Error(t, err, "expected error creating directory")
 	assert.Nil(t, nodir, "expected nil response")
@@ -347,10 +339,11 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 
 	// force create a new directory with the bad root as parent.
 	dirID := apiv1.DirectoryID(uuid.New())
+	meta := &apiv1.DirectoryMetadata{}
 	dirMap.Store(dirID, &apiv1.Directory{
-		ID:       dirID,
+		Id:       dirID,
 		Name:     "test",
-		Metadata: map[string]string{},
+		Metadata: meta,
 		Parent:   &id,
 	})
 
@@ -376,28 +369,24 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 
 	// create yet another subdirectory
 	subdir1, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "test",
+		Version: apiv1.APIVersion,
+		Name:    "test",
 	}, dirID)
 	assert.NoError(t, err, "error creating directory")
 
 	subdir2, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "test",
-	}, subdir1.Directory.ID)
+		Version: apiv1.APIVersion,
+		Name:    "test",
+	}, subdir1.Directory.Id)
 	assert.NoError(t, err, "error creating directory")
 
 	// replace subdir1 for erroneous data
-	dirMap.Store(subdir1.Directory.ID, 0)
+	dirMap.Store(subdir1.Directory.Id, 0)
 
 	// list parents until test
 	// The idea is that both the given directories are valid, but there are directories in
 	// between that are not.
-	resp, err = cli.GetParentsUntil(context.Background(), subdir2.Directory.ID, dirID)
+	resp, err = cli.GetParentsUntil(context.Background(), subdir2.Directory.Id, dirID)
 	assert.Error(t, err, "expected error listing parents")
 	assert.Nil(t, resp, "expected nil response")
 

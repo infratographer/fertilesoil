@@ -55,16 +55,16 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 	}
 
 	if d.Metadata == nil {
-		d.Metadata = v1.DirectoryMetadata{}
+		d.Metadata = &v1.DirectoryMetadata{}
 	}
 
-	d.ID = v1.DirectoryID(uuid.New())
+	d.Id = v1.DirectoryID(uuid.New())
 
-	rawdir, _ := t.dirMap.LoadOrStore(d.ID, d)
+	rawdir, _ := t.dirMap.LoadOrStore(d.Id, d)
 
 	dir, ok := rawdir.(*v1.Directory)
 	if !ok {
-		return nil, fmt.Errorf("directory %s is not of type *v1.Directory", d.ID)
+		return nil, fmt.Errorf("directory %s is not of type *v1.Directory", d.Id)
 	}
 
 	return dir, nil
@@ -84,7 +84,7 @@ func (t *Driver) ListRoots(ctx context.Context) ([]v1.DirectoryID, error) {
 		}
 
 		if dir.Parent == nil {
-			roots = append(roots, dir.ID)
+			roots = append(roots, dir.Id)
 		}
 
 		return true
@@ -105,16 +105,16 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 	}
 
 	if d.Metadata == nil {
-		d.Metadata = v1.DirectoryMetadata{}
+		d.Metadata = &v1.DirectoryMetadata{}
 	}
 
-	d.ID = v1.DirectoryID(uuid.New())
+	d.Id = v1.DirectoryID(uuid.New())
 
-	rawdir, _ := t.dirMap.LoadOrStore(d.ID, d)
+	rawdir, _ := t.dirMap.LoadOrStore(d.Id, d)
 
 	dir, ok := rawdir.(*v1.Directory)
 	if !ok {
-		return nil, fmt.Errorf("directory %s is not of type *v1.Directory", d.ID)
+		return nil, fmt.Errorf("directory %s is not of type *v1.Directory", d.Id)
 	}
 
 	return dir, nil
@@ -183,7 +183,7 @@ func (t *Driver) GetParentsUntilAncestor(
 			return nil, err
 		}
 
-		if dir.Parent == nil && dir.ID != ancestor {
+		if dir.Parent == nil && dir.Id != ancestor {
 			return nil, storage.ErrDirectoryNotFound
 		}
 
@@ -212,7 +212,7 @@ func (t *Driver) GetChildren(ctx context.Context, id v1.DirectoryID) ([]v1.Direc
 		}
 
 		if dir.Parent != nil && *dir.Parent == id {
-			children = append(children, dir.ID)
+			children = append(children, dir.Id)
 		}
 
 		return true

@@ -37,7 +37,7 @@ func (s *sqlstorage) IsDirectoryTracked(ctx context.Context, id apiv1.DirectoryI
 
 func (s *sqlstorage) IsDirectoryInfoUpdated(ctx context.Context, dir *apiv1.Directory) (bool, error) {
 	// Verify if the directory is tracked and if the ID and deleted at info are up to date.
-	tracked, err := s.IsDirectoryTracked(ctx, dir.ID)
+	tracked, err := s.IsDirectoryTracked(ctx, dir.Id)
 	if err != nil {
 		return false, err
 	}
@@ -49,7 +49,7 @@ func (s *sqlstorage) IsDirectoryInfoUpdated(ctx context.Context, dir *apiv1.Dire
 	var deletedAt sql.NullTime
 	err = s.db.QueryRowContext(ctx,
 		"SELECT deleted_at FROM tracked_directories WHERE id = $1",
-		dir.ID).Scan(&deletedAt)
+		dir.Id).Scan(&deletedAt)
 	if err != nil {
 		return false, fmt.Errorf("error checking if directory exists: %w", err)
 	}
@@ -60,7 +60,7 @@ func (s *sqlstorage) IsDirectoryInfoUpdated(ctx context.Context, dir *apiv1.Dire
 func (s *sqlstorage) CreateDirectory(ctx context.Context, d *apiv1.Directory) (*apiv1.Directory, error) {
 	// insert directory but ignore if conflict
 	insertQuery := `INSERT INTO tracked_directories (id) VALUES ($1) ON CONFLICT DO NOTHING`
-	res, err := s.db.ExecContext(ctx, insertQuery, d.ID)
+	res, err := s.db.ExecContext(ctx, insertQuery, d.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error inserting directory: %w", err)
 	}
@@ -96,7 +96,13 @@ func (s *sqlstorage) DeleteDirectory(ctx context.Context, id apiv1.DirectoryID) 
 	return nil
 }
 
-func compareDeletedAt(observed sql.NullTime, expected time.Time) bool {
+// compareDeletedAt compares the observed deleted at time with the expected deleted at time.
+// It will return true if the observed and expected deleted at times are equal.
+func compareDeletedAt(observed sql.NullTime, expected *time.Time) bool {
+	if expected == nil {
+		return !observed.Valid
+	}
+
 	if observed.Valid && expected.IsZero() {
 		return false
 	}
@@ -105,7 +111,7 @@ func compareDeletedAt(observed sql.NullTime, expected time.Time) bool {
 		return false
 	}
 
-	if observed.Valid && !expected.IsZero() && observed.Time != expected {
+	if observed.Valid && !expected.IsZero() && observed.Time != *expected {
 		return false
 	}
 

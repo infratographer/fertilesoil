@@ -2,7 +2,6 @@ package v1
 
 import (
 	"errors"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -11,26 +10,12 @@ const APIVersion = "v1"
 
 var ErrParsingID = errors.New("error parsing id")
 
-type Directory struct {
-	ID        DirectoryID       `json:"id"`
-	Name      string            `json:"name"`
-	Metadata  DirectoryMetadata `json:"metadata"`
-	CreatedAt time.Time         `json:"createdAt"`
-	UpdatedAt time.Time         `json:"updatedAt"`
-	DeletedAt time.Time         `json:"deletedAt"`
-
-	// Parent is the parent directory.
-	// The visibility of this structure depends on the query.
-	// Full tree queries are normally not allowed.
-	Parent *DirectoryID `json:"parent,omitempty"`
-}
-
 func (d *Directory) IsRoot() bool {
 	return d.Parent == nil
 }
 
 func (d *Directory) IsDeleted() bool {
-	return !d.DeletedAt.IsZero()
+	return d.DeletedAt != nil && !d.DeletedAt.IsZero()
 }
 
 type DirectoryID uuid.UUID
