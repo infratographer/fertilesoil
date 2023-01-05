@@ -68,6 +68,7 @@ paths:
           required: true
           schema:
             type: string
+            x-go-type: DirectoryID
       responses:
         '200':
           description: directory response
@@ -91,6 +92,7 @@ paths:
           required: true
           schema:
             type: string
+            x-go-type: DirectoryID
       requestBody:
         description: New directory to create
         required: true
@@ -117,6 +119,91 @@ paths:
     
     # TODO: Implement this
     # delete:
+
+  /directories/{id}/children:
+    get:
+      description: Returns a list of child directories for a given directory ID.
+      operationId: listChildren
+      parameters:
+        - name: id
+          in: path
+          description: ID of directory to return children for
+          required: true
+          schema:
+            type: string
+            x-go-type: DirectoryID
+      responses:
+        '200':
+          description: directories response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryList'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /directories/{id}/parents:
+    get:
+      description: Returns a list of parent directories for a given directory ID.
+      operationId: listParents
+      parameters:
+        - name: id
+          in: path
+          description: ID of directory to return parents for
+          required: true
+          schema:
+            type: string
+            x-go-type: DirectoryID
+      responses:
+        '200':
+          description: directories response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryList'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /directories/{id}/parents/{until}:
+    get:
+      description: Returns a list of parent directories for a given directory ID until a given directory ID.
+      operationId: listParentsUntil
+      parameters:
+        - name: id
+          in: path
+          description: ID of directory to return parents for
+          required: true
+          schema:
+            type: string
+            x-go-type: DirectoryID
+        - name: until
+          in: path
+          description: ID of directory to stop returning parents at
+          required: true
+          schema:
+            type: string
+            x-go-type: DirectoryID
+      responses:
+        '200':
+          description: directories response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryList'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 components:
   schemas:
