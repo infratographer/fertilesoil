@@ -1,0 +1,210 @@
+---
+openapi: "3.1.0"
+info:
+  version: 0.0.1
+  title: Treeman
+  description: Treeman is a manager for directory trees.
+  contact:
+    name: Infratographer Authors
+    url: http://github.com/infratographer
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+#servers:
+#  - url: http://localhost/api/v1
+paths:
+  /roots:
+    get:
+      description: |
+        Returns a list of root directories.
+      operationId: listRoots
+      responses:
+        '200':
+          description: directories response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DirectoryList'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      description: Creates a new root directory
+      operationId: createRootDirectory
+      requestBody:
+        description: New root directory to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDirectoryRequest'
+      responses:
+        '201':
+          description: directory response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryFetch'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /directories/{id}:
+    get:
+      description: Returns a directory based on a single ID.
+      operationId: getDirectory
+      parameters:
+        - name: id
+          in: path
+          description: ID of directory to return
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: directory response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryFetch'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      description: Creates a new sub-directory given the ID of the parent directory
+      operationId: createDirectory
+      parameters:
+        - name: id
+          in: path
+          description: ID of the parent directory to create a sub-directory in
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: New directory to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDirectoryRequest'
+      responses:
+        '201':
+          description: directory response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryFetch'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    # TODO: Implement this
+    # put:
+    
+    # TODO: Implement this
+    # delete:
+
+components:
+  schemas:
+    Directory:
+      allOf:
+        - $ref: '#/components/schemas/NewDirectory'
+        - type: object
+          required:
+          - id
+          - createdAt
+          - updatedAt
+          properties:
+            id:
+              type: string
+              x-go-type: DirectoryID
+            parent:
+              type: string
+              x-go-type: DirectoryID
+              optional: true
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+            deletedAt:
+              type: string
+              format: date-time
+
+    NewDirectory:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          x-oapi-codegen-extra-tags:
+            binding: required
+        metadata:
+          type: object
+          x-go-type: DirectoryMetadata
+    
+    DirectoryRequestMeta:
+      type: object
+      required:
+        - version
+      properties:
+        version:
+          type: string
+    
+    CreateDirectoryRequest:
+      allOf:
+        - $ref: '#/components/schemas/DirectoryRequestMeta'
+        - $ref: '#/components/schemas/NewDirectory'
+    
+    # Response for fetching directories
+    DirectoryFetch:
+      allOf:
+        - $ref: '#/components/schemas/DirectoryRequestMeta'
+        - type: object
+          required:
+          - directory
+          properties:
+            directory:
+              $ref: '#/components/schemas/Directory'
+    
+    # Response for listing directories
+    DirectoryList:
+      allOf:
+        - $ref: '#/components/schemas/DirectoryRequestMeta'
+        - type: object
+          required:
+          - directories
+          properties:
+            directories:
+              type: array
+              items:
+                type: string
+                x-go-type: DirectoryID
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string

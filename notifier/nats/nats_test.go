@@ -56,14 +56,15 @@ func TestBasicNotifications(t *testing.T) {
 	assert.NoError(t, err, "creating NATS subscription")
 
 	// Send create
+	now := time.Now().UTC()
 	dir := &apiv1.Directory{
-		ID:   apiv1.DirectoryID(uuid.New()),
+		Id:   apiv1.DirectoryID(uuid.New()),
 		Name: "test",
-		Metadata: apiv1.DirectoryMetadata{
+		Metadata: &apiv1.DirectoryMetadata{
 			"foo": "bar",
 		},
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
+		CreatedAt: now,
+		UpdatedAt: now,
 		Parent:    nil,
 	}
 
@@ -78,12 +79,13 @@ func TestBasicNotifications(t *testing.T) {
 
 	assert.NoError(t, err, "unmarshalling nats message")
 	assert.Equal(t, apiv1.EventTypeCreate, unmarshalled.Type)
-	assert.Equal(t, dir.ID, unmarshalled.Directory.ID)
+	assert.Equal(t, dir.Id, unmarshalled.Directory.Id)
 	assert.Equal(t, dir.Name, unmarshalled.Directory.Name)
 	assert.Equal(t, dir.Metadata, unmarshalled.Directory.Metadata)
 	assert.Equal(t, dir.CreatedAt, unmarshalled.Directory.CreatedAt)
 
 	// Send update
+	now = time.Now().UTC()
 	dir.UpdatedAt = time.Now().UTC()
 
 	err = ntf.NotifyUpdate(context.Background(), dir)
@@ -97,13 +99,13 @@ func TestBasicNotifications(t *testing.T) {
 
 	assert.NoError(t, err, "unmarshalling nats message")
 	assert.Equal(t, apiv1.EventTypeUpdate, unmarshalled.Type)
-	assert.Equal(t, dir.ID, unmarshalled.Directory.ID)
+	assert.Equal(t, dir.Id, unmarshalled.Directory.Id)
 	assert.Equal(t, dir.Name, unmarshalled.Directory.Name)
 	assert.Equal(t, dir.Metadata, unmarshalled.Directory.Metadata)
 	assert.Equal(t, dir.UpdatedAt, unmarshalled.Directory.UpdatedAt)
 
 	// Send delete
-	dir.DeletedAt = time.Now().UTC()
+	dir.DeletedAt = &now
 
 	err = ntf.NotifyDelete(context.Background(), dir)
 	assert.NoError(t, err, "notifying delete")
@@ -116,7 +118,7 @@ func TestBasicNotifications(t *testing.T) {
 
 	assert.NoError(t, err, "unmarshalling nats message")
 	assert.Equal(t, apiv1.EventTypeDelete, unmarshalled.Type)
-	assert.Equal(t, dir.ID, unmarshalled.Directory.ID)
+	assert.Equal(t, dir.Id, unmarshalled.Directory.Id)
 	assert.Equal(t, dir.Name, unmarshalled.Directory.Name)
 	assert.Equal(t, dir.Metadata, unmarshalled.Directory.Metadata)
 	assert.Equal(t, dir.DeletedAt, unmarshalled.Directory.DeletedAt)
@@ -150,9 +152,9 @@ func TestNotifyCreateFailsOnBadConnection(t *testing.T) {
 
 	// Send create
 	dir := &apiv1.Directory{
-		ID:   apiv1.DirectoryID(uuid.New()),
+		Id:   apiv1.DirectoryID(uuid.New()),
 		Name: "test",
-		Metadata: apiv1.DirectoryMetadata{
+		Metadata: &apiv1.DirectoryMetadata{
 			"foo": "bar",
 		},
 		CreatedAt: time.Now().UTC(),

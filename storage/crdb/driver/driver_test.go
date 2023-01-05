@@ -23,9 +23,9 @@ func TestCreateAndGetRoot(t *testing.T) {
 	rd := withRootDir(t, store)
 
 	// retrieve from db
-	queryrootdir, qerr := store.GetDirectory(context.Background(), rd.ID)
+	queryrootdir, qerr := store.GetDirectory(context.Background(), rd.Id)
 	assert.NoError(t, qerr, "error querying db")
-	assert.Equal(t, rd.ID, queryrootdir.ID, "id should match")
+	assert.Equal(t, rd.Id, queryrootdir.Id, "id should match")
 	assert.Equal(t, rd.Name, queryrootdir.Name, "name should match")
 }
 
@@ -40,7 +40,7 @@ func TestListRootOneRoot(t *testing.T) {
 	r, err := store.ListRoots(context.Background())
 	assert.NoError(t, err, "should not have errored")
 	assert.Len(t, r, 1, "should have 1 root")
-	assert.Contains(t, r, rd.ID, "should contain root")
+	assert.Contains(t, r, rd.Id, "should contain root")
 }
 
 func TestListMultipleRoots(t *testing.T) {
@@ -57,10 +57,10 @@ func TestListMultipleRoots(t *testing.T) {
 	r, err := store.ListRoots(context.Background())
 	assert.NoError(t, err, "should not have errored")
 	assert.Len(t, r, 4, "should have 4 roots")
-	assert.Contains(t, r, rd1.ID, "should contain root")
-	assert.Contains(t, r, rd2.ID, "should contain root")
-	assert.Contains(t, r, rd3.ID, "should contain root")
-	assert.Contains(t, r, rd4.ID, "should contain root")
+	assert.Contains(t, r, rd1.Id, "should contain root")
+	assert.Contains(t, r, rd2.Id, "should contain root")
+	assert.Contains(t, r, rd3.Id, "should contain root")
+	assert.Contains(t, r, rd4.Id, "should contain root")
 }
 
 func TestCreateMultipleRoots(t *testing.T) {
@@ -72,7 +72,7 @@ func TestCreateMultipleRoots(t *testing.T) {
 	rd1 := withRootDir(t, store)
 	rd2 := withRootDir(t, store)
 
-	assert.NotEqual(t, rd1.ID, rd2.ID, "ids should not match")
+	assert.NotEqual(t, rd1.Id, rd2.Id, "ids should not match")
 
 	// retrieve from db
 	rows, err := db.Query("SELECT * FROM directories WHERE parent_id IS NULL")
@@ -113,7 +113,7 @@ func TestCreateAndGetDirectory(t *testing.T) {
 
 	d := &v1.Directory{
 		Name:   "testdir",
-		Parent: &rootdir.ID,
+		Parent: &rootdir.Id,
 	}
 
 	rd, err := store.CreateDirectory(context.Background(), d)
@@ -123,9 +123,9 @@ func TestCreateAndGetDirectory(t *testing.T) {
 	assert.Equal(t, d.Parent, rd.Parent, "parent id should match")
 
 	// retrieve from db
-	querydir, qerr := store.GetDirectory(context.Background(), rd.ID)
+	querydir, qerr := store.GetDirectory(context.Background(), rd.Id)
 	assert.NoError(t, qerr, "error querying db")
-	assert.Equal(t, rd.ID, querydir.ID, "id should match")
+	assert.Equal(t, rd.Id, querydir.Id, "id should match")
 
 	// should have only 1 directory that's not root
 	rows, err := db.Query("SELECT * FROM directories WHERE parent_id IS NOT NULL")
@@ -192,17 +192,17 @@ func TestGetSingleParent(t *testing.T) {
 
 	d := &v1.Directory{
 		Name:   "testdir",
-		Parent: &rootdir.ID,
+		Parent: &rootdir.Id,
 	}
 
 	rd, err := store.CreateDirectory(context.Background(), d)
 	assert.NoError(t, err, "error creating directory")
 
-	parents, gperr := store.GetParents(context.Background(), rd.ID)
+	parents, gperr := store.GetParents(context.Background(), rd.Id)
 	assert.NoError(t, gperr, "error getting parents")
 	assert.Len(t, parents, 1, "should have 1 parent")
 
-	assert.Equal(t, rootdir.ID, parents[0], "id should match")
+	assert.Equal(t, rootdir.Id, parents[0], "id should match")
 }
 
 func TestGetMultipleParents(t *testing.T) {
@@ -215,19 +215,19 @@ func TestGetMultipleParents(t *testing.T) {
 
 	d1 := &v1.Directory{
 		Name:   "testdir1",
-		Parent: &rootdir.ID,
+		Parent: &rootdir.Id,
 	}
 	d2 := &v1.Directory{
 		Name:   "testdir2",
-		Parent: &d1.ID,
+		Parent: &d1.Id,
 	}
 	d3 := &v1.Directory{
 		Name:   "testdir3",
-		Parent: &d2.ID,
+		Parent: &d2.Id,
 	}
 	d4 := &v1.Directory{
 		Name:   "testdir4",
-		Parent: &d3.ID,
+		Parent: &d3.Id,
 	}
 
 	rd1, err := store.CreateDirectory(context.Background(), d1)
@@ -242,21 +242,21 @@ func TestGetMultipleParents(t *testing.T) {
 	rd4, err := store.CreateDirectory(context.Background(), d4)
 	assert.NoError(t, err, "error creating directory")
 
-	parents, gperr := store.GetParents(context.Background(), rd3.ID)
+	parents, gperr := store.GetParents(context.Background(), rd3.Id)
 	assert.NoError(t, gperr, "error getting parents")
 	assert.Len(t, parents, 3, "should have 3 parents")
 
-	assert.Equal(t, d2.ID, parents[0], "id should match")
-	assert.Equal(t, d1.ID, parents[1], "id should match")
-	assert.Equal(t, rootdir.ID, parents[2], "id should match")
+	assert.Equal(t, d2.Id, parents[0], "id should match")
+	assert.Equal(t, d1.Id, parents[1], "id should match")
+	assert.Equal(t, rootdir.Id, parents[2], "id should match")
 
-	parents, gperr = store.GetParentsUntilAncestor(context.Background(), rd4.ID, rd1.ID)
+	parents, gperr = store.GetParentsUntilAncestor(context.Background(), rd4.Id, rd1.Id)
 	assert.NoError(t, gperr, "error getting parents")
 	assert.Len(t, parents, 3, "should have 3 parents")
 
-	assert.Equal(t, d3.ID, parents[0], "id should match")
-	assert.Equal(t, d2.ID, parents[1], "id should match")
-	assert.Equal(t, d1.ID, parents[2], "id should match")
+	assert.Equal(t, d3.Id, parents[0], "id should match")
+	assert.Equal(t, d2.Id, parents[1], "id should match")
+	assert.Equal(t, d1.Id, parents[2], "id should match")
 }
 
 func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
@@ -267,7 +267,7 @@ func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
 
 	rootdir := withRootDir(t, store)
 
-	parents, gperr := store.GetParents(context.Background(), rootdir.ID)
+	parents, gperr := store.GetParents(context.Background(), rootdir.Id)
 	assert.NoError(t, gperr, "error getting parents")
 	assert.Len(t, parents, 0, "should have 0 parents")
 }
@@ -293,17 +293,17 @@ func TestGetChildrenBasic(t *testing.T) {
 
 	d := &v1.Directory{
 		Name:   "testdir",
-		Parent: &rootdir.ID,
+		Parent: &rootdir.Id,
 	}
 
 	rd, err := store.CreateDirectory(context.Background(), d)
 	assert.NoError(t, err, "error creating directory")
 
-	children, gperr := store.GetChildren(context.Background(), rootdir.ID)
+	children, gperr := store.GetChildren(context.Background(), rootdir.Id)
 	assert.NoError(t, gperr, "error getting children")
 	assert.Len(t, children, 1, "should have 1 child")
 
-	assert.Equal(t, rd.ID, children[0], "id should match")
+	assert.Equal(t, rd.Id, children[0], "id should match")
 }
 
 func TestGetChildrenMultiple(t *testing.T) {
@@ -316,22 +316,22 @@ func TestGetChildrenMultiple(t *testing.T) {
 
 	d1 := &v1.Directory{
 		Name:   "testdir1",
-		Parent: &rootdir.ID,
+		Parent: &rootdir.Id,
 	}
 
 	d2 := &v1.Directory{
 		Name:   "testdir2",
-		Parent: &rootdir.ID,
+		Parent: &rootdir.Id,
 	}
 
 	d3 := &v1.Directory{
 		Name:   "testdir3",
-		Parent: &rootdir.ID,
+		Parent: &rootdir.Id,
 	}
 
 	d4 := &v1.Directory{
 		Name:   "testdir4",
-		Parent: &d1.ID,
+		Parent: &d1.Id,
 	}
 
 	rd1, err := store.CreateDirectory(context.Background(), d1)
@@ -346,15 +346,15 @@ func TestGetChildrenMultiple(t *testing.T) {
 	rd4, err := store.CreateDirectory(context.Background(), d4)
 	assert.NoError(t, err, "error creating directory")
 
-	children, gperr := store.GetChildren(context.Background(), rootdir.ID)
+	children, gperr := store.GetChildren(context.Background(), rootdir.Id)
 	assert.NoError(t, gperr, "error getting children")
 
 	assert.Len(t, children, 4, "should have 4 children")
 
-	assert.Contains(t, children, rd1.ID, "should contain id")
-	assert.Contains(t, children, rd2.ID, "should contain id")
-	assert.Contains(t, children, rd3.ID, "should contain id")
-	assert.Contains(t, children, rd4.ID, "should contain id")
+	assert.Contains(t, children, rd1.Id, "should contain id")
+	assert.Contains(t, children, rd2.Id, "should contain id")
+	assert.Contains(t, children, rd3.Id, "should contain id")
+	assert.Contains(t, children, rd4.Id, "should contain id")
 }
 
 func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
@@ -365,7 +365,7 @@ func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
 
 	rootdir := withRootDir(t, store)
 
-	children, err := store.GetChildren(context.Background(), rootdir.ID)
+	children, err := store.GetChildren(context.Background(), rootdir.Id)
 	assert.NoError(t, err, "should have errored")
 	assert.Len(t, children, 0, "should have 0 children")
 }
@@ -378,7 +378,7 @@ func TestGetParentsUntilAncestorIsEmptyIfChildIsAncestor(t *testing.T) {
 
 	rootdir := withRootDir(t, store)
 
-	ancestors, err := store.GetParentsUntilAncestor(context.Background(), rootdir.ID, rootdir.ID)
+	ancestors, err := store.GetParentsUntilAncestor(context.Background(), rootdir.Id, rootdir.Id)
 	assert.NoError(t, err, "should not have errored")
 	assert.Len(t, ancestors, 0, "should have 0 children")
 }
@@ -391,7 +391,7 @@ func TestGetParentsUntilAncestorParentNotFound(t *testing.T) {
 
 	rootdir := withRootDir(t, store)
 
-	ancestors, err := store.GetParentsUntilAncestor(context.Background(), v1.DirectoryID(uuid.New()), rootdir.ID)
+	ancestors, err := store.GetParentsUntilAncestor(context.Background(), v1.DirectoryID(uuid.New()), rootdir.Id)
 	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
 	assert.Nil(t, ancestors, "should be nil")
 }

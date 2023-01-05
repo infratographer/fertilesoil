@@ -63,10 +63,8 @@ func TestAppReconcileAndWatch(t *testing.T) {
 
 	// initialize root. An app needs a root to be initialized
 	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "root",
+		Version: apiv1.APIVersion,
+		Name:    "root",
 	})
 	assert.NoError(t, err, "error creating root")
 
@@ -76,7 +74,7 @@ func TestAppReconcileAndWatch(t *testing.T) {
 	watcher, err := clientv1nats.NewSubscriber(clientconn, subject)
 	assert.NoError(t, err, "error creating nats subscriber")
 
-	appctrl, apptester := setupTestApp(t, rd.Directory.ID, cli, watcher, appstore)
+	appctrl, apptester := setupTestApp(t, rd.Directory.Id, cli, watcher, appstore)
 
 	cancelCtx, cancel := context.WithCancel(context.Background())
 
@@ -102,11 +100,9 @@ func TestAppReconcileAndWatch(t *testing.T) {
 
 	// Create a directory
 	_, err = cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "test",
-	}, rd.Directory.ID)
+		Version: apiv1.APIVersion,
+		Name:    "test",
+	}, rd.Directory.Id)
 	assert.NoError(t, err, "error creating directory")
 
 	apptester.waitForReconcile()
@@ -128,11 +124,9 @@ func TestAppReconcileAndWatch(t *testing.T) {
 
 	// Create a subdirectory
 	_, err = cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
-		DirectoryRequestMeta: apiv1.DirectoryRequestMeta{
-			Version: apiv1.APIVersion,
-		},
-		Name: "subtest",
-	}, rd.Directory.ID)
+		Version: apiv1.APIVersion,
+		Name:    "subtest",
+	}, rd.Directory.Id)
 	assert.NoError(t, err, "error creating directory")
 
 	// wait for a full reconcile
