@@ -101,6 +101,15 @@ as part of this project.
 
 A client library that can be used to access the tree manager [is provided](client/v1).
 
+### An Application Framework
+
+The app framework is a framework that can be used to build applications that are
+scoped to a specific node in the tree. The intent is for service authors to
+use this framework to seamlessly get events on the tree and update their internal
+state accordingly. There relevant files are located in the [`app`](app) directory,
+and documentation on how to use it is provided in the
+[Application Framework](docs/appframework.md) doc.
+
 Applications
 ------------
 
