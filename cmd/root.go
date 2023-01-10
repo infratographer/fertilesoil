@@ -5,8 +5,10 @@ package cmd
 
 import (
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // rootCmd represents the base command when called without any subcommands.
@@ -29,7 +31,14 @@ func Execute() {
 	}
 }
 
+func initConfig() {
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
+	viper.SetEnvPrefix("fertilesoil")
+
+	viper.AutomaticEnv() // read in environment variables that match
+}
+
 //nolint:gochecknoinits // This is encouraged by cobra
 func init() {
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	cobra.OnInitialize(initConfig)
 }
