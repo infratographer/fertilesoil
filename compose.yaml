@@ -1,0 +1,32 @@
+version: '3'
+services:
+  crdb:
+    image: cockroachdb/cockroach:latest
+    command: start-single-node --insecure
+    environment:
+      COCKROACH_DATABASE: directory
+    ports:
+      - 26257:26257
+      - 8081:8080
+    volumes:
+      - ./.dc-data/crdb:/cockroach/cockroach-data
+
+  nats:
+    image: nats:2-alpine
+    command:
+      - ash
+      - -ec
+      - |
+        # add single user with nkey
+        cat <<EOF >> /etc/nats/nats-server.conf
+        authorization {
+          users: [{ nkey: $$(cat /nkey.pub) }]
+        }
+        EOF
+
+        # start nats server
+        nats-server -c /etc/nats/nats-server.conf
+    ports:
+      - 4222:4222
+    volumes:
+      - ./nkey.pub:/nkey.pub

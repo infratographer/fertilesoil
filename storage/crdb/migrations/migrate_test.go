@@ -27,3 +27,17 @@ func TestMigrations(t *testing.T) {
 	assert.NoError(t, goose.Up(dbConn, "."), "failed to run migrations")
 	assert.NoError(t, goose.Down(dbConn, "."), "failed to run migrations")
 }
+
+func TestMigrate(t *testing.T) {
+	t.Parallel()
+
+	ts, crdberr := testserver.NewTestServer()
+	assert.NoError(t, crdberr)
+	defer ts.Stop()
+
+	dbdialect := "postgres"
+	dbConn, dbopenerr := sql.Open(dbdialect, ts.PGURL().String())
+	assert.NoError(t, dbopenerr, "failed to open db connection")
+
+	assert.NoError(t, migrations.Migrate(dbConn), "failed to set dialect")
+}
