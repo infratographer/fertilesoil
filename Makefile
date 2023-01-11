@@ -20,86 +20,90 @@ GO_FILES=$(shell git ls-files '*.go')
 
 ## Targets
 
+.PHONY: help
+help: Makefile ## Print help
+	@grep -h "##" $(MAKEFILE_LIST) | grep -v grep | sed -e 's/:.*##/#/' | column -c 2 -t -s#
+
 .PHONY: build
-build:
+build:  ## Builds treeman binary.
 	go build -o $(BIN) ./main.go
 
 .PHONY: test
-test:
+test:  ## Runs unit tests.
 	@echo Running unit tests...
 	@go test -timeout 30s -cover -short  -tags testtools ./...
 
 .PHONY: coverage
-coverage:
+coverage:  ## Generates a test coverage report.
 	@echo Generating coverage report...
 	@go test -timeout 30s -tags testtools ./... -coverprofile=coverage.out -covermode=atomic
 	@go tool cover -func=coverage.out
 	@go tool cover -html=coverage.out
 
-lint: golint
+lint: golint  ## Runs all lint checks.
 
-golint: | vendor $(TOOLS_DIR)/golangci-lint
+golint: | vendor $(TOOLS_DIR)/golangci-lint  ## Runs Go lint checks.
 	@echo Linting Go files...
 	@$(TOOLS_DIR)/golangci-lint run
 
-clean: dev-infra-down
+clean: dev-infra-down  ## Cleans generated files.
 	@echo Cleaning...
 	@rm -f coverage.out
 	@go clean -testcache
 	@rm -rf $(TOOLS_DIR)
 	@rm -f nkey.key nkey.pub
 
-vendor:
+vendor:  ## Downloads and tidies go modules.
 	@go mod download
 	@go mod tidy
 
 .PHONY: gci-diff gci-write gci
-gci-diff: $(GO_FILES) | gci-tool
+gci-diff: $(GO_FILES) | gci-tool  ## Outputs improper go import ordering.
 	@gci diff -s 'standard,default,prefix(github.com/infratographer)' $^
 
-gci-write: $(GO_FILES) | gci-tool
+gci-write: $(GO_FILES) | gci-tool  ## Checks and updates all go files for proper import ordering.
 	@gci write -s 'standard,default,prefix(github.com/infratographer)' $^
 
-gci: | gci-diff gci-write
+gci: | gci-diff gci-write  ## Outputs and corrects all improper go import ordering.
 
-image: treeman-image
+image: treeman-image  ## Builds all docker images.
 
-treeman-image:
+treeman-image:  ## Builds the treeman docker image.
 	$(CONTAINER_BUILD_CMD) -f images/treeman/Dockerfile . -t $(TREEMAN_CONTAINER_IMAGE_NAME):$(CONTAINER_TAG)
 
 .PHONY: generate
-generate: openapi
+generate: openapi  ## Generates OpenAPI types and specs.
 
 .PHONY: openapi
-openapi: openapi-types openapi-spec
+openapi: openapi-types openapi-spec  ## Generates OpenAPI types and specs.
 
 .PHONY: openapi-types
-openapi-types:
+openapi-types:  ## Generates OpenAPI types.
 	@echo Generating OpenAPI types...
 	@$(OAPI_CODEGEN_CMD) -package v1 \
 		-generate types \
 		-o api/v1/types.gen.go treeman-openapi-v1.yaml
 
 .PHONY: openapi-spec
-openapi-spec:
+openapi-spec:  ## Generates OpenAPI specs.
 	@echo Generating OpenAPI spec...
 	@$(OAPI_CODEGEN_CMD) -package v1 \
 		-generate spec \
 		-o api/v1/openapi.gen.go treeman-openapi-v1.yaml
 
-nkey.key: | nk-tool
+nkey.key: | nk-tool  ## Generates a new NATS user key.
 	@echo Generating nats $@
 	@nk -gen user -pubout > $@
 
-nkey.pub: nkey.key | nk-tool
+nkey.pub: nkey.key | nk-tool  ## Exports the NATS user public key.
 	@echo Generating nats $@
 	@nk -inkey $< -pubout > $@
 
 .PHONY: nkey
-nkey: nkey.key nkey.pub
+nkey: nkey.key nkey.pub  ## Generates and exports a new NATS user public and private keys.
 
 .PHONY: dev-infra-up dev-infra-down
-dev-infra-up: compose.yaml nkey
+dev-infra-up: compose.yaml nkey  ## Starts local services to simplify local development.
 	@echo Starting services
 	@docker compose up -d
 
@@ -113,7 +117,7 @@ dev-infra-up: compose.yaml nkey
 				sleep 2; \
 			done
 
-dev-infra-down: compose.yaml
+dev-infra-down: compose.yaml  ## Stops local services used for local development.
 	@echo Stopping services
 	@docker compose down
 

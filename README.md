@@ -177,3 +177,5 @@ $ go run ./main.go serve --nats-url 127.0.0.1:4222 --nats-nkey nkey.key
 [GIN-debug] GET    /api/v1/directories/:id/parents/:until --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listParentsUntil.func1 (7 handlers)
 {"level":"info","ts":1673469132.733697,"caller":"common/common.go:129","msg":"listening on","app":"treemanager","version":"unknown","address":":8080"}
 ```
+
+Run `make help` for additional useful commands.
