@@ -121,3 +121,59 @@ Thus, any notion of a global resource or application is not provided by the tree
 
 For a more detailed descriptions on the components or applications that
 are to be built for this platform, view the [Applications](docs/apps.md) doc.
+
+Development
+-----------
+
+This project depends on a couple of services in order to run.
+A database, in this case CockroachDB and NATS an event broker / event handler.
+
+To simplify local testing, a [docker compose](compose.yaml) file has been created
+which will spin up basic implementations of both of these services.
+It's recommended however to use the `make` target `dev-infra-up` which will generate
+the necessary dependencies to start these services.
+
+Example output:
+
+```shell
+$ make dev-infra-up
+Generating nats nkey.key
+Generating nats nkey.pub
+Starting services
+[+] Running 3/3
+ ⠿ Network fertilesoil_default   Created                   0.1s
+ ⠿ Container fertilesoil-nats-1  Started                   0.7s
+ ⠿ Container fertilesoil-crdb-1  Started                   0.6s
+Running migrations
+{"level":"info","ts":1673455828.3097413,"caller":"cmd/migrate.go:44","msg":"executing migrations","app":"treemanager","version":"unknown"}
+2023/01/11 16:50:28 OK    20221222105349_init.sql
+2023/01/11 16:50:28 goose: no migrations to run. current version: 20221222105349
+2023/01/11 16:50:28 OK    20230101000000_init.sql
+2023/01/11 16:50:28 goose: no migrations to run. current version: 20230101000000
+```
+
+You may then run treeman:
+
+```shell
+$ export FERTILESOIL_CRDB_HOST=localhost:26257
+$ export FERTILESOIL_CRDB_USER=root
+$ export FERTILESOIL_CRDB_PARAMS=sslmode=disable
+$ go run ./main.go serve --nats-url 127.0.0.1:4222 --nats-nkey nkey.key
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:   export GIN_MODE=release
+ - using code:  gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /metrics                  --> github.com/zsais/go-gin-prometheus.prometheusHandler.func1 (6 handlers)
+[GIN-debug] GET    /livez                    --> github.com/infratographer/fertilesoil/internal/httpsrv/common.(*Server).livenessCheckHandler-fm (6 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/infratographer/fertilesoil/internal/httpsrv/common.(*Server).readinessCheckHandler-fm (6 handlers)
+[GIN-debug] GET    /api                      --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.apiVersionHandler (7 handlers)
+[GIN-debug] GET    /api/v1                   --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.apiVersionHandler (7 handlers)
+[GIN-debug] GET    /api/v1/roots             --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listRoots.func1 (7 handlers)
+[GIN-debug] POST   /api/v1/roots             --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.createRootDirectory.func1 (7 handlers)
+[GIN-debug] GET    /api/v1/directories/:id   --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.getDirectory.func1 (7 handlers)
+[GIN-debug] POST   /api/v1/directories/:id   --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.createDirectory.func1 (7 handlers)
+[GIN-debug] GET    /api/v1/directories/:id/children --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listChildren.func1 (7 handlers)
+[GIN-debug] GET    /api/v1/directories/:id/parents --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listParents.func1 (7 handlers)
+[GIN-debug] GET    /api/v1/directories/:id/parents/:until --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listParentsUntil.func1 (7 handlers)
+{"level":"info","ts":1673469132.733697,"caller":"common/common.go:129","msg":"listening on","app":"treemanager","version":"unknown","address":":8080"}
+```

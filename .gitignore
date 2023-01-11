@@ -2,3 +2,6 @@
 /treeman
 .tools/
 coverage.out
+nkey.key
+nkey.pub
+.dc-data/
