@@ -15,6 +15,9 @@ CONTAINER_TAG?=latest
 # OpenAPI settings
 OAPI_CODEGEN_CMD?=go run github.com/deepmap/oapi-codegen/cmd/oapi-codegen
 
+# go files to be checked
+GO_FILES=$(shell git ls-files '*.go')
+
 ## Targets
 
 .PHONY: build
@@ -48,6 +51,15 @@ clean:
 vendor:
 	@go mod download
 	@go mod tidy
+
+.PHONY: gci-diff gci-write gci
+gci-diff: $(GO_FILES) | gci-tool
+	@gci diff -s 'standard,default,prefix(github.com/infratographer)' $^
+
+gci-write: $(GO_FILES) | gci-tool
+	@gci write -s 'standard,default,prefix(github.com/infratographer)' $^
+
+gci: | gci-diff gci-write
 
 image: treeman-image
 
@@ -86,3 +98,9 @@ $(TOOLS_DIR)/golangci-lint: $(TOOLS_DIR)
 	curl -sfL $$URL/$$VERSION/install.sh | sh -s $$VERSION
 	$(TOOLS_DIR)/golangci-lint version
 	$(TOOLS_DIR)/golangci-lint linters
+
+.PHONY: gci-tool
+gci-tool:
+	@which gci &>/dev/null \
+		|| echo Installing gci tool \
+		&& go install github.com/daixiang0/gci@latest
