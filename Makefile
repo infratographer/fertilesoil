@@ -42,11 +42,12 @@ golint: | vendor $(TOOLS_DIR)/golangci-lint
 	@echo Linting Go files...
 	@$(TOOLS_DIR)/golangci-lint run
 
-clean:
+clean: dev-infra-down
 	@echo Cleaning...
-	@rm -rf coverage.out
+	@rm -f coverage.out
 	@go clean -testcache
-	@rm -r $(TOOLS_DIR)
+	@rm -rf $(TOOLS_DIR)
+	@rm -f nkey.key nkey.pub
 
 vendor:
 	@go mod download
@@ -86,6 +87,36 @@ openapi-spec:
 		-generate spec \
 		-o api/v1/openapi.gen.go treeman-openapi-v1.yaml
 
+nkey.key: | nk-tool
+	@echo Generating nats $@
+	@nk -gen user -pubout > $@
+
+nkey.pub: nkey.key | nk-tool
+	@echo Generating nats $@
+	@nk -inkey $< -pubout > $@
+
+.PHONY: nkey
+nkey: nkey.key nkey.pub
+
+.PHONY: dev-infra-up dev-infra-down
+dev-infra-up: compose.yaml nkey
+	@echo Starting services
+	@docker compose up -d
+
+	@echo Running migrations
+	@export FERTILESOIL_CRDB_HOST=localhost:26257 \
+		FERTILESOIL_CRDB_USER=root \
+		FERTILESOIL_CRDB_PARAMS=sslmode=disable \
+		&& sleep 2 \
+		&& while ! go run ./main.go migrate; do \
+				echo attempting again in 2 seconds; \
+				sleep 2; \
+			done
+
+dev-infra-down: compose.yaml
+	@echo Stopping services
+	@docker compose down
+
 # Tools setup
 $(TOOLS_DIR):
 	mkdir -p $(TOOLS_DIR)
@@ -104,3 +135,10 @@ gci-tool:
 	@which gci &>/dev/null \
 		|| echo Installing gci tool \
 		&& go install github.com/daixiang0/gci@latest
+
+.PHONY: nk-tool
+nk-tool:
+	@which nk &>/dev/null || \
+		echo Installing "nk" tool && \
+		go install github.com/nats-io/nkeys/nk@latest && \
+		export PATH=$$PATH:$(shell go env GOPATH)
