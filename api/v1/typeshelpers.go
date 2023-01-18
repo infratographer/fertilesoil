@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"encoding/json"
 	"errors"
 
 	"github.com/google/uuid"
@@ -31,6 +32,26 @@ func ParseDirectoryID(id string) (DirectoryID, error) {
 
 func (did DirectoryID) String() string {
 	return uuid.UUID(did).String()
+}
+
+func (did DirectoryID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(did.String())
+}
+
+func (did *DirectoryID) UnmarshalJSON(b []byte) error {
+	var strUUID string
+	if err := json.Unmarshal(b, &strUUID); err != nil {
+		return err
+	}
+
+	u, err := uuid.Parse(strUUID)
+	if err != nil {
+		return err
+	}
+
+	*did = DirectoryID(u)
+
+	return nil
 }
 
 type DirectoryMetadata map[string]string
