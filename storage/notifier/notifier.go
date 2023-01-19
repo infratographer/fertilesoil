@@ -77,9 +77,26 @@ func (n *notifierWithStorage) CreateDirectory(ctx context.Context, d *apiv1.Dire
 	return d, nil
 }
 
-func (n *notifierWithStorage) DeleteDirectory(ctx context.Context, id apiv1.DirectoryID) error {
-	// TODO(jaosorior): Implement soft-delete and notify for all children.
-	return nil
+func (n *notifierWithStorage) DeleteDirectory(ctx context.Context, id apiv1.DirectoryID) ([]*apiv1.Directory, error) {
+	affected, err := n.DirectoryAdmin.DeleteDirectory(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, d := range affected {
+		err = n.notifyWrapper(ctx, func(ctx context.Context) error {
+			if err := n.notifier.NotifyDelete(ctx, d); err != nil {
+				return err
+			}
+			return nil
+		})
+
+		if err != nil {
+			return affected, fmt.Errorf("%w: %v", ErrNotifyFailed, err)
+		}
+	}
+
+	return affected, nil
 }
 
 func (n *notifierWithStorage) CreateRoot(ctx context.Context, d *apiv1.Directory) (*apiv1.Directory, error) {

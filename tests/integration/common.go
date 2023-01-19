@@ -207,3 +207,61 @@ func DirectoryNotFoundTest(t *testing.T, cli clientv1.HTTPRootClient) {
 	assert.Error(t, err, "should have errored getting directory")
 	assert.Nil(t, resp, "directory should be nil")
 }
+
+//nolint:thelper // In this case, we don't want to use t.Helper() because we want to see the line number of the caller.
+func DeleteDirectoryTest(t *testing.T, cli clientv1.HTTPRootClient) {
+	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
+		Version: apiv1.APIVersion,
+		Name:    "root",
+	})
+	assert.NoError(t, err, "error creating root")
+
+	ch1, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
+		Version: apiv1.APIVersion,
+		Name:    "child1",
+	}, rd.Directory.Id)
+	assert.NoError(t, err, "error creating child1")
+
+	ch2, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
+		Version: apiv1.APIVersion,
+		Name:    "child2",
+	}, ch1.Directory.Id)
+	assert.NoError(t, err, "error creating child2")
+
+	// Delete directory with invalid parent
+	resp, err := cli.DoRaw(context.Background(), http.MethodDelete,
+		"/api/v1/directories/invalid", nil)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	resp.Body.Close()
+
+	// Delete root directory
+	rootDelResp, err := cli.DeleteDirectory(context.Background(), rd.Directory.Id)
+	assert.Error(t, err, "should have errored")
+	assert.Nil(t, rootDelResp, "response should not be nil")
+
+	// Delete child directory
+	delResp, err := cli.DeleteDirectory(context.Background(), ch1.Directory.Id)
+	assert.NoError(t, err, "should not have errored")
+	assert.NotNil(t, delResp, "response should not be nil")
+	assert.Len(t, delResp.Directories, 2, "expected 2 affected directories") //nolint:gomnd // runs as part of tests
+
+	for _, id := range delResp.Directories {
+		switch id {
+		case ch1.Directory.Id:
+		case ch2.Directory.Id:
+		default:
+			t.Errorf("unexpected directory affected by deletion: %s", id)
+		}
+	}
+
+	// Check that deleted directory is not fetchable
+	getResp, err := cli.GetDirectory(context.Background(), ch2.Directory.Id)
+	assert.Error(t, err, "should have errored getting directory")
+	assert.Nil(t, getResp, "directory should be nil")
+
+	// Delete missing directory
+	delDelResp, err := cli.DeleteDirectory(context.Background(), ch1.Directory.Id)
+	assert.Error(t, err, "should have errored")
+	assert.Nil(t, delDelResp, "expected nil affected directories")
+}

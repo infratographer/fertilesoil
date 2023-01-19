@@ -171,6 +171,118 @@ func TestCreateDirectoryWithoutParent(t *testing.T) {
 	assert.Nil(t, rd, "should be nil")
 }
 
+func TestDeleteRootDirectory(t *testing.T) {
+	t.Parallel()
+
+	db := utils.GetNewTestDB(t, baseDBURL)
+	store := driver.NewDirectoryDriver(db)
+
+	rootdir := withRootDir(t, store)
+
+	child1 := &v1.Directory{
+		Name:   "child1",
+		Parent: &rootdir.Id,
+	}
+
+	_, err := store.CreateDirectory(context.Background(), child1)
+	assert.NoError(t, err, "error creating child directory")
+
+	affected, err := store.DeleteDirectory(context.Background(), rootdir.Id)
+	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "unexpected error returned")
+
+	assert.Len(t, affected, 0, "should not have any affected records")
+}
+
+func TestDeleteDirectoryWithoutChildren(t *testing.T) {
+	t.Parallel()
+
+	db := utils.GetNewTestDB(t, baseDBURL)
+	store := driver.NewDirectoryDriver(db)
+
+	rootdir := withRootDir(t, store)
+
+	child1 := &v1.Directory{
+		Name:   "child1",
+		Parent: &rootdir.Id,
+	}
+
+	child1dir, err := store.CreateDirectory(context.Background(), child1)
+	assert.NoError(t, err, "error creating child directory")
+
+	affected, err := store.DeleteDirectory(context.Background(), child1dir.Id)
+	assert.NoError(t, err, "error deleting directory")
+
+	assert.Len(t, affected, 1, "should only have one affected row")
+	assert.Equal(t, child1dir.Id, affected[0].Id, "affected id doesn't match child id")
+	assert.NotNil(t, affected[0].DeletedAt, "DeletedAt should be set")
+}
+
+func TestDeleteDirectoryWithChildren(t *testing.T) {
+	t.Parallel()
+
+	db := utils.GetNewTestDB(t, baseDBURL)
+	store := driver.NewDirectoryDriver(db)
+
+	rootdir := withRootDir(t, store)
+
+	child1 := &v1.Directory{
+		Name:   "child1",
+		Parent: &rootdir.Id,
+	}
+
+	child1dir, err := store.CreateDirectory(context.Background(), child1)
+	assert.NoError(t, err, "error creating child 1 directory")
+
+	child2 := &v1.Directory{
+		Name:   "child2",
+		Parent: &child1dir.Id,
+	}
+
+	child2dir, err := store.CreateDirectory(context.Background(), child2)
+	assert.NoError(t, err, "error creating child 2 directory")
+
+	affected, err := store.DeleteDirectory(context.Background(), child1dir.Id)
+	assert.NoError(t, err, "error deleting directory")
+
+	assert.Len(t, affected, 2, "should have two affected rows")
+
+	for _, dir := range affected {
+		switch dir.Id {
+		case child1dir.Id:
+			assert.NotNil(t, dir.DeletedAt, "child 1 DeletedAt should be set")
+		case child2dir.Id:
+			assert.NotNil(t, dir.DeletedAt, "child 2 DeletedAt should be set")
+		default:
+			t.Errorf("unexpected directory affected by deletion: %s", dir.Id)
+		}
+	}
+}
+
+func TestDeleteDirectoryAlreadyDeleted(t *testing.T) {
+	t.Parallel()
+
+	db := utils.GetNewTestDB(t, baseDBURL)
+	store := driver.NewDirectoryDriver(db)
+
+	rootdir := withRootDir(t, store)
+
+	child1 := &v1.Directory{
+		Name:   "child1",
+		Parent: &rootdir.Id,
+	}
+
+	child1dir, err := store.CreateDirectory(context.Background(), child1)
+	assert.NoError(t, err, "error creating child directory")
+
+	_, err = store.DeleteDirectory(context.Background(), child1dir.Id)
+	assert.NoError(t, err, "error deleting directory")
+
+	affected, err := store.DeleteDirectory(context.Background(), child1dir.Id)
+	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "unexpected error returned")
+
+	assert.Len(t, affected, 0, "should not have any affected records")
+}
+
 func TestQueryUnknownDirectory(t *testing.T) {
 	t.Parallel()
 
@@ -269,6 +381,37 @@ func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
 
 	parents, gperr := store.GetParents(context.Background(), rootdir.Id)
 	assert.NoError(t, gperr, "error getting parents")
+	assert.Len(t, parents, 0, "should have 0 parents")
+}
+
+func TestGetParentsOfDeletedDirectory(t *testing.T) {
+	t.Parallel()
+
+	db := utils.GetNewTestDB(t, baseDBURL)
+	store := driver.NewDirectoryDriver(db)
+
+	rootdir := withRootDir(t, store)
+
+	d1 := &v1.Directory{
+		Name:   "testdir1",
+		Parent: &rootdir.Id,
+	}
+	d2 := &v1.Directory{
+		Name:   "testdir2",
+		Parent: &d1.Id,
+	}
+
+	_, err := store.CreateDirectory(context.Background(), d1)
+	assert.NoError(t, err, "error creating directory")
+
+	rd2, err := store.CreateDirectory(context.Background(), d2)
+	assert.NoError(t, err, "error creating directory")
+
+	_, err = store.DeleteDirectory(context.Background(), rd2.Id)
+	assert.NoError(t, err, "deleting child directory")
+
+	parents, gperr := store.GetParents(context.Background(), rd2.Id)
+	assert.ErrorIs(t, gperr, storage.ErrDirectoryNotFound, "expect directory not found")
 	assert.Len(t, parents, 0, "should have 0 parents")
 }
 
@@ -396,15 +539,15 @@ func TestGetParentsUntilAncestorParentNotFound(t *testing.T) {
 	assert.Nil(t, ancestors, "should be nil")
 }
 
-func TestGetChildrenFromUnknownReturnsEmpty(t *testing.T) {
+func TestGetChildrenFromUnknownReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryDriver(db)
 
 	children, err := store.GetChildren(context.Background(), v1.DirectoryID(uuid.New()))
-	assert.NoError(t, err, "should have errored")
-	assert.Len(t, children, 0, "should have 0 children")
+	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
+	assert.Nil(t, children, "should be nil")
 }
 
 func TestOperationsFailWithBadDatabaseConnection(t *testing.T) {

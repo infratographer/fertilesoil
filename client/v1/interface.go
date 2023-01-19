@@ -22,6 +22,7 @@ type ReadOnlyClient interface {
 type Client interface {
 	ReadOnlyClient
 	CreateDirectory(c context.Context, r *v1.CreateDirectoryRequest, parent v1.DirectoryID) (*v1.DirectoryFetch, error)
+	DeleteDirectory(c context.Context, id v1.DirectoryID) (*v1.DirectoryList, error)
 }
 
 // RootClient allows for instantiating a client

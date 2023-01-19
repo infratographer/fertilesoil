@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -83,7 +84,7 @@ func (t *Driver) ListRoots(ctx context.Context) ([]v1.DirectoryID, error) {
 			return false
 		}
 
-		if dir.Parent == nil {
+		if dir.DeletedAt == nil && dir.Parent == nil {
 			roots = append(roots, dir.Id)
 		}
 
@@ -121,9 +122,42 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 }
 
 // DeleteDirectory deletes a directory.
-func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) error {
-	t.dirMap.Delete(id)
-	return nil
+func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) ([]*v1.Directory, error) {
+	dir, err := t.GetDirectory(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if dir.Parent == nil {
+		return nil, storage.ErrDirectoryNotFound
+	}
+
+	children, err := t.GetChildren(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("error getting children: %w", err)
+	}
+
+	deletedTime := time.Now()
+
+	// length is the requested directory plus the count of children
+	affected := make([]*v1.Directory, 1+len(children))
+
+	dir.DeletedAt = &deletedTime
+
+	affected[0] = dir
+
+	for i, childID := range children {
+		child, err := t.GetDirectory(ctx, childID)
+		if err != nil {
+			return nil, fmt.Errorf("error getting child: %s: %w", childID, err)
+		}
+
+		child.DeletedAt = &deletedTime
+
+		affected[i+1] = child
+	}
+
+	return affected, nil
 }
 
 // GetDirectory gets a directory by ID.
@@ -136,6 +170,10 @@ func (t *Driver) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.Direc
 	dir, ok := rawdir.(*v1.Directory)
 	if !ok {
 		return nil, fmt.Errorf("directory %s is not of type *v1.Directory", id)
+	}
+
+	if dir.DeletedAt != nil {
+		return nil, storage.ErrDirectoryNotFound
 	}
 
 	return dir, nil
@@ -211,7 +249,7 @@ func (t *Driver) GetChildren(ctx context.Context, id v1.DirectoryID) ([]v1.Direc
 			return false
 		}
 
-		if dir.Parent != nil && *dir.Parent == id {
+		if dir.DeletedAt == nil && dir.Parent != nil && *dir.Parent == id {
 			children = append(children, dir.Id)
 		}
 

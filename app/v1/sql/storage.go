@@ -77,23 +77,41 @@ func (s *sqlstorage) CreateDirectory(ctx context.Context, d *apiv1.Directory) (*
 	return d, nil
 }
 
-func (s *sqlstorage) DeleteDirectory(ctx context.Context, id apiv1.DirectoryID) error {
+func (s *sqlstorage) DeleteDirectory(ctx context.Context, id apiv1.DirectoryID) ([]*apiv1.Directory, error) {
 	// soft delete directory
-	res, err := s.db.ExecContext(ctx, "UPDATE tracked_directories SET deleted_at = NOW() WHERE id = $1", id)
+	var affected []*apiv1.Directory
+
+	deleteQuery := `
+		UPDATE tracked_directories
+		SET deleted_at = NOW()
+		WHERE
+			deleted_at IS NULL
+			AND id = $1
+		RETURNING id, deleted_at`
+
+	rows, err := s.db.QueryContext(ctx, deleteQuery, id)
 	if err != nil {
-		return fmt.Errorf("error deleting directory: %w", err)
+		return nil, fmt.Errorf("error deleting directory: %w", err)
 	}
 
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("error getting rows affected: %w", err)
+	defer rows.Close()
+
+	for rows.Next() {
+		var d apiv1.Directory
+
+		err := rows.Scan(&d.Id, &d.DeletedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning directory: %w", err)
+		}
+
+		affected = append(affected, &d)
 	}
 
-	if rows != 1 {
-		return fmt.Errorf("expected 1 row affected, got %d", rows)
+	if len(affected) != 1 {
+		return affected, fmt.Errorf("expected 1 row affected, got %d", len(affected))
 	}
 
-	return nil
+	return affected, nil
 }
 
 // compareDeletedAt compares the observed deleted at time with the expected deleted at time.

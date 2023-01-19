@@ -132,6 +132,32 @@ func (c *httpClient) ListRoots(ctx context.Context) (*v1.DirectoryList, error) {
 	return &dirList, nil
 }
 
+func (c *httpClient) DeleteDirectory(ctx context.Context, id v1.DirectoryID) (*v1.DirectoryList, error) {
+	path, err := url.JoinPath("/api/v1/directories", id.String())
+	if err != nil {
+		return nil, fmt.Errorf("error getting directory: %w", err)
+	}
+
+	resp, err := c.DoRaw(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error getting directory: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error getting directory: %s", resp.Status)
+	}
+
+	var dirList v1.DirectoryList
+	err = dirList.Parse(resp.Body)
+
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response: %w", err)
+	}
+
+	return &dirList, nil
+}
+
 func (c *httpClient) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.DirectoryFetch, error) {
 	path, err := url.JoinPath("/api/v1/directories", id.String())
 	if err != nil {
