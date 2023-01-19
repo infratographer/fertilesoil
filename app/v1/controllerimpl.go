@@ -164,7 +164,7 @@ func (c *controller) persistIfUpToDate(ctx context.Context, dir apiv1.DirectoryI
 func (c *controller) persistDirectory(ctx context.Context, d *apiv1.Directory) error {
 	// handle deletion
 	if d.IsDeleted() {
-		err := c.store.DeleteDirectory(ctx, d.Id)
+		_, err := c.store.DeleteDirectory(ctx, d.Id)
 		if err != nil {
 			return err
 		}

@@ -259,6 +259,27 @@ func TestDirectoryNotFound(t *testing.T) {
 	integration.DirectoryNotFoundTest(t, cli)
 }
 
+func TestDeleteDirectory(t *testing.T) {
+	t.Parallel()
+
+	skt := testutils.NewUnixsocketPath(t)
+	srv := newTestServer(t, skt, nil)
+
+	defer func() {
+		err := srv.Shutdown()
+		assert.NoError(t, err, "error shutting down server")
+	}()
+
+	go testutils.RunTestServer(t, srv)
+
+	srvAddr := getStubServerAddress(t, skt)
+	cli := testutils.NewTestClient(t, skt, srvAddr)
+
+	testutils.WaitForServer(t, cli)
+
+	integration.DeleteDirectoryTest(t, cli)
+}
+
 func TestErrorDoesntLeakInfo(t *testing.T) {
 	t.Parallel()
 

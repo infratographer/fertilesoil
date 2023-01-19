@@ -400,3 +400,22 @@ func TestDirectoryNotFound(t *testing.T) {
 
 	integration.DirectoryNotFoundTest(t, cli)
 }
+
+func TestDeleteDirectory(t *testing.T) {
+	t.Parallel()
+
+	skt := testutils.NewUnixsocketPath(t)
+	srv := newTestServer(t, skt)
+	defer func() {
+		err := srv.Shutdown()
+		assert.NoError(t, err, "error shutting down server")
+	}()
+
+	go testutils.RunTestServer(t, srv)
+
+	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+
+	testutils.WaitForServer(t, cli)
+
+	integration.DeleteDirectoryTest(t, cli)
+}

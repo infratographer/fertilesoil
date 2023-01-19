@@ -63,7 +63,7 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 func (t *Driver) ListRoots(ctx context.Context) ([]v1.DirectoryID, error) {
 	var roots []v1.DirectoryID
 
-	q := t.formatQuery("SELECT id FROM directories %[1]s WHERE parent_id IS NULL")
+	q := t.formatQuery("SELECT id FROM directories %[1]s WHERE parent_id IS NULL AND deleted_at IS NULL")
 
 	rows, err := t.db.QueryContext(ctx, q)
 	if err != nil {
@@ -106,9 +106,49 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 	return d, nil
 }
 
-func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) error {
-	// TODO(jaosorior): Implement soft-delete.
-	return nil
+func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) ([]*v1.Directory, error) {
+	var affected []*v1.Directory
+
+	q := t.formatQuery(`WITH RECURSIVE get_children AS (
+		SELECT id, parent_id FROM directories
+		WHERE id = $1 AND deleted_at IS NULL AND parent_id IS NOT NULL
+
+		UNION
+
+		SELECT d.id, d.parent_id FROM directories d
+		INNER JOIN get_children gc ON d.parent_id = gc.id
+		WHERE d.deleted_at IS NULL
+	)
+	UPDATE directories
+	SET deleted_at = NOW()
+	WHERE
+		deleted_at IS NULL
+		AND id IN (SELECT id FROM get_children)
+	RETURNING id, name, metadata, created_at, updated_at, deleted_at, parent_id %[1]s`)
+
+	rows, err := t.db.QueryContext(ctx, q, id)
+	if err != nil {
+		return nil, fmt.Errorf("error querying directory: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var d v1.Directory
+
+		err := rows.Scan(&d.Id, &d.Name, &d.Metadata, &d.CreatedAt, &d.UpdatedAt, &d.DeletedAt, &d.Parent)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning directory: %w", err)
+		}
+
+		affected = append(affected, &d)
+	}
+
+	// If no rows were affected, the directory wasn't found.
+	if len(affected) == 0 {
+		return nil, storage.ErrDirectoryNotFound
+	}
+
+	return affected, nil
 }
 
 // GetDirectoryByID returns a directory by its ID.
@@ -116,11 +156,11 @@ func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) error {
 func (t *Driver) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.Directory, error) {
 	var d v1.Directory
 
-	q := t.formatQuery(`SELECT id, name, metadata, created_at, updated_at, parent_id FROM directories %[1]s
-WHERE id = $1`)
+	q := t.formatQuery(`SELECT id, name, metadata, created_at, updated_at, deleted_at, parent_id FROM directories %[1]s
+WHERE id = $1 AND deleted_at IS NULL`)
 
 	err := t.db.QueryRowContext(ctx, q,
-		id).Scan(&d.Id, &d.Name, &d.Metadata, &d.CreatedAt, &d.UpdatedAt, &d.Parent)
+		id).Scan(&d.Id, &d.Name, &d.Metadata, &d.CreatedAt, &d.UpdatedAt, &d.DeletedAt, &d.Parent)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, storage.ErrDirectoryNotFound
@@ -137,12 +177,13 @@ func (t *Driver) GetParents(ctx context.Context, child v1.DirectoryID) ([]v1.Dir
 	// TODO(jaosorior): What's more efficient? A single recursive query or multiple queries?
 	//                  Should we instead recurse in-code and do multiple queries?
 	q := t.formatQuery(`WITH RECURSIVE get_parents AS (
-	SELECT id, parent_id FROM directories WHERE id = $1
+	SELECT id, parent_id FROM directories WHERE id = $1 AND deleted_at IS NULL
 
 	UNION
 
 	SELECT d.id, d.parent_id FROM directories d
 	INNER JOIN get_parents gp ON d.id = gp.parent_id
+	WHERE d.deleted_at IS NULL
 )
 SELECT id FROM get_parents %[1]s`)
 
@@ -185,13 +226,13 @@ func (t *Driver) GetParentsUntilAncestor(
 	//                  Should we instead recurse in-code and do multiple queries?
 	q := t.formatQuery(`WITH RECURSIVE get_parents AS (
 	SELECT id, parent_id FROM directories
-	WHERE id = $1
+	WHERE id = $1 AND deleted_at IS NULL
 
 	UNION
 
 	SELECT d.id, d.parent_id FROM directories d
 	INNER JOIN get_parents gp ON d.id = gp.parent_id
-	WHERE gp.id != $2
+	WHERE gp.id != $2 AND d.deleted_at IS NULL
 ) SELECT id FROM get_parents %[1]s`)
 
 	rows, err := t.db.QueryContext(ctx, q, child, ancestor)
@@ -223,12 +264,13 @@ func (t *Driver) GetChildren(ctx context.Context, parent v1.DirectoryID) ([]v1.D
 
 	q := t.formatQuery(`WITH RECURSIVE get_children AS (
 	SELECT id, parent_id FROM directories
-	WHERE parent_id = $1
+	WHERE id = $1 AND deleted_at IS NULL
 
 	UNION
 
 	SELECT d.id, d.parent_id FROM directories d
 	INNER JOIN get_children gc ON d.parent_id = gc.id
+	WHERE d.deleted_at IS NULL
 )
 SELECT id FROM get_children %[1]s`)
 
@@ -247,7 +289,12 @@ SELECT id FROM get_children %[1]s`)
 		children = append(children, did)
 	}
 
-	return children, nil
+	if len(children) == 0 {
+		return nil, storage.ErrDirectoryNotFound
+	}
+
+	// skip the first element, which is the parent
+	return children[1:], nil
 }
 
 // Note that this assumes that queries only take one

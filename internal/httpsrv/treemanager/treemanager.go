@@ -49,6 +49,7 @@ func newHandler(logger *zap.Logger, s *common.Server) *gin.Engine {
 
 	r.GET("/api/v1/directories/:id", getDirectory(s))
 	r.POST("/api/v1/directories/:id", createDirectory(s))
+	r.DELETE("/api/v1/directories/:id", deleteDirectory(s))
 
 	r.GET("/api/v1/directories/:id/children", listChildren(s))
 	r.GET("/api/v1/directories/:id/parents", listParents(s))
@@ -179,6 +180,45 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 		c.JSON(http.StatusCreated, &v1.DirectoryFetch{
 			Version:   v1.APIVersion,
 			Directory: *rd,
+		})
+	}
+}
+
+func deleteDirectory(s *common.Server) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		idstr := c.Param("id")
+
+		id, err := v1.ParseDirectoryID(idstr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid id",
+			})
+			return
+		}
+
+		affected, err := s.T.DeleteDirectory(c, id)
+		if errors.Is(err, storage.ErrDirectoryNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "directory not found",
+			})
+			return
+		} else if err != nil {
+			s.L.Error("error deleting directory", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "internal server error",
+			})
+			return
+		}
+
+		affectedIDs := make([]v1.DirectoryID, len(affected))
+
+		for i, d := range affected {
+			affectedIDs[i] = d.Id
+		}
+
+		c.JSON(http.StatusOK, &v1.DirectoryList{
+			Directories: affectedIDs,
+			Version:     v1.APIVersion,
 		})
 	}
 }

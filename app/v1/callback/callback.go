@@ -43,9 +43,11 @@ func (s *AppStorageWithCallback) CreateDirectory(ctx context.Context, d *apiv1.D
 	return d, nil
 }
 
-func (s *AppStorageWithCallback) DeleteDirectory(ctx context.Context, id apiv1.DirectoryID) error {
+func (s *AppStorageWithCallback) DeleteDirectory(
+	ctx context.Context, id apiv1.DirectoryID,
+) ([]*apiv1.Directory, error) {
 	if err := s.cfg.DeleteDirectory(ctx, id); err != nil {
-		return err
+		return nil, err
 	}
 	return s.impl.DeleteDirectory(ctx, id)
 }
