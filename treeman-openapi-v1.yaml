@@ -117,8 +117,30 @@ paths:
     # TODO: Implement this
     # put:
     
-    # TODO: Implement this
-    # delete:
+    delete:
+      description: Deletes a directory and all of its children.
+      operationId: deleteDirectory
+      parameters:
+        - name: id
+          in: path
+          description: ID of directory to delete
+          required: true
+          schema:
+            type: string
+            x-go-type: DirectoryID
+      responses:
+        '200':
+          description: affected directories response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryList'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /directories/{id}/children:
     get:
