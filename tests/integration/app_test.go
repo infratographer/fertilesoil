@@ -57,7 +57,7 @@ func TestAppReconcileAndWatch(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress, nil)
 
 	testutils.WaitForServer(t, cli)
 

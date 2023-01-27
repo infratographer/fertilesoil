@@ -30,7 +30,7 @@ func TestListNoRoots(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -51,7 +51,7 @@ func TestListOneRoot(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -88,7 +88,7 @@ func TestListMultipleRoots(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -119,7 +119,7 @@ func TestOneDirectory(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -175,7 +175,7 @@ func TestFullTree(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -272,7 +272,7 @@ func TestCreateRootWithMalformedData(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -310,7 +310,7 @@ func TestServerWithBadDB(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress, nil)
 
 	t.Log("waiting for server to start. This uses a timer as the database is not set up.")
 	time.Sleep(1 * time.Second)
@@ -356,7 +356,7 @@ func TestInvalidDirectoryIDs(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -375,7 +375,7 @@ func TestCreateErroneousDirectory(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -394,7 +394,7 @@ func TestDirectoryNotFound(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -413,7 +413,7 @@ func TestDeleteDirectory(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, baseServerAddress)
+	cli := testutils.NewTestClient(t, skt, baseServerAddress, nil)
 
 	testutils.WaitForServer(t, cli)
 

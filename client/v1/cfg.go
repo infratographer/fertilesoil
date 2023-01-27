@@ -8,7 +8,6 @@ import (
 type ClientConfig struct {
 	managerURL *url.URL
 	client     *http.Client
-	unixSocket string
 }
 
 func NewClientConfig() *ClientConfig {
@@ -22,11 +21,6 @@ func (c *ClientConfig) WithManagerURL(u *url.URL) *ClientConfig {
 
 func (c *ClientConfig) WithClient(client *http.Client) *ClientConfig {
 	c.client = client
-	return c
-}
-
-func (c *ClientConfig) WithUnixSocket(socket string) *ClientConfig {
-	c.unixSocket = socket
 	return c
 }
 

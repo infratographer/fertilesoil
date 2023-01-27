@@ -11,6 +11,10 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/stretchr/testify/assert"
+	"go.hollow.sh/toolbox/ginjwt"
+	"golang.org/x/oauth2"
+	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 
 	clientv1 "github.com/infratographer/fertilesoil/client/v1"
 	"github.com/infratographer/fertilesoil/internal/httpsrv/common"
@@ -31,12 +35,46 @@ func RunTestServer(t *testing.T, srv *common.Server) {
 	assert.ErrorIs(t, err, http.ErrServerClosed, "unexpected error running server")
 }
 
-func NewTestClient(t *testing.T, skt string, srvURL *url.URL) clientv1.HTTPRootClient {
+func NewTestClient(t *testing.T, skt string, srvURL *url.URL, authConfig *ginjwt.AuthConfig) clientv1.HTTPRootClient {
 	t.Helper()
 
-	cfg := clientv1.NewClientConfig().WithManagerURL(srvURL).WithUnixSocket(skt)
+	var client *http.Client
+
+	if skt != "" {
+		client = clientv1.UnixClient(skt)
+	}
+
+	client = getAuthClient(client, authConfig)
+
+	cfg := clientv1.NewClientConfig().WithClient(client).WithManagerURL(srvURL)
 	httpc := clientv1.NewHTTPRootClient(cfg)
 	return httpc
+}
+
+func getAuthClient(client *http.Client, authConfig *ginjwt.AuthConfig) *http.Client {
+	if authConfig != nil {
+		ctx := context.Background()
+
+		if client != nil {
+			ctx = context.WithValue(ctx, oauth2.HTTPClient, client)
+		}
+
+		authClaim := jwt.Claims{
+			Subject:   "test-user",
+			Issuer:    authConfig.Issuer,
+			NotBefore: jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
+			Audience:  jwt.Audience{authConfig.Audience, "another.test.service"},
+		}
+
+		signer := ginjwt.TestHelperMustMakeSigner(jose.RS256, ginjwt.TestPrivRSAKey1ID, ginjwt.TestPrivRSAKey1)
+		rawToken := ginjwt.TestHelperGetToken(signer, authClaim, "scope", "test")
+
+		return oauth2.NewClient(ctx, oauth2.StaticTokenSource(&oauth2.Token{
+			AccessToken: rawToken,
+		}))
+	}
+
+	return client
 }
 
 func WaitForServer(t *testing.T, cli clientv1.HTTPClient) {

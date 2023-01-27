@@ -137,28 +137,49 @@ Example output:
 
 ```shell
 $ make dev-infra-up
-Generating nats nkey.key
-Generating nats nkey.pub
+Generating nats .dc-data/nkey.key
+Generating nats .dc-data/nkey.pub
+Generating OAuth2 config .dc-data/oauth2.json
 Starting services
-[+] Running 3/3
- ⠿ Network fertilesoil_default   Created                   0.1s
- ⠿ Container fertilesoil-nats-1  Started                   0.7s
- ⠿ Container fertilesoil-crdb-1  Started                   0.6s
+[+] Running 4/4
+ ⠿ Network fertilesoil_default                 Created                                                                                                                                                0.1s
+ ⠿ Container fertilesoil-crdb-1                Started                                                                                                                                                0.8s
+ ⠿ Container fertilesoil-nats-1                Started                                                                                                                                                0.8s
+ ⠿ Container fertilesoil-mock-oauth2-server-1  Started                                                                                                                                                0.9s
 Running migrations
-{"level":"info","ts":1673455828.3097413,"caller":"cmd/migrate.go:44","msg":"executing migrations","app":"treemanager","version":"unknown"}
-2023/01/11 16:50:28 OK    20221222105349_init.sql
-2023/01/11 16:50:28 goose: no migrations to run. current version: 20221222105349
-2023/01/11 16:50:28 OK    20230101000000_init.sql
-2023/01/11 16:50:28 goose: no migrations to run. current version: 20230101000000
+{"level":"info","ts":1674847104.337401,"caller":"cmd/migrate.go:44","msg":"executing migrations","app":"treemanager","version":"unknown"}
+2023/01/27 19:18:24 OK   20221222105349_init.sql (5.81ms)
+2023/01/27 19:18:24 goose: no migrations to run. current version: 20221222105349
+2023/01/27 19:18:24 OK   20230101000000_init.sql (14.94ms)
+2023/01/27 19:18:24 goose: no migrations to run. current version: 20230101000000
+
+Use "make dev-oauth2-token" to create a token
 ```
 
-You may then run treeman:
+Next create an OIDC token:
+
+```shell
+$ make dev-oauth2-token
+Generating OAuth2 token
+Audience: fertilesoil
+Issuer: http://localhost:8082/fertilesoil
+JWKS URL: http://localhost:8082/fertilesoil/jwks
+token_type      Bearer
+access_token    eyJraWQiO...SNIP...bTSVi5a6w
+expires_in      119
+scope   test
+```
+
+Now you may run treeman:
 
 ```shell
 $ export FERTILESOIL_CRDB_HOST=localhost:26257
 $ export FERTILESOIL_CRDB_USER=root
 $ export FERTILESOIL_CRDB_PARAMS=sslmode=disable
-$ go run ./main.go serve --nats-url 127.0.0.1:4222 --nats-nkey nkey.key --audit-log-path ./.audit/audit.log
+$ export FERTILESOIL_OIDC_AUDIENCE=fertilesoil
+$ export FERTILESOIL_OIDC_ISSUER=http://localhost:8082/fertilesoil
+$ export FERTILESOIL_OIDC_JWKSURI=http://localhost:8082/fertilesoil/jwks
+$ go run ./main.go serve --nats-url 127.0.0.1:4222 --nats-nkey .dc-data/nkey.key --audit-log-path ./.audit/audit.log
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:   export GIN_MODE=release
  - using code:  gin.SetMode(gin.ReleaseMode)
@@ -167,15 +188,24 @@ $ go run ./main.go serve --nats-url 127.0.0.1:4222 --nats-nkey nkey.key --audit-
 [GIN-debug] GET    /livez                    --> github.com/infratographer/fertilesoil/internal/httpsrv/common.(*Server).livenessCheckHandler-fm (6 handlers)
 [GIN-debug] GET    /readyz                   --> github.com/infratographer/fertilesoil/internal/httpsrv/common.(*Server).readinessCheckHandler-fm (6 handlers)
 [GIN-debug] GET    /api                      --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.apiVersionHandler (7 handlers)
-[GIN-debug] GET    /api/v1                   --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.apiVersionHandler (7 handlers)
-[GIN-debug] GET    /api/v1/roots             --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listRoots.func1 (7 handlers)
-[GIN-debug] POST   /api/v1/roots             --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.createRootDirectory.func1 (7 handlers)
-[GIN-debug] GET    /api/v1/directories/:id   --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.getDirectory.func1 (7 handlers)
-[GIN-debug] POST   /api/v1/directories/:id   --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.createDirectory.func1 (7 handlers)
-[GIN-debug] GET    /api/v1/directories/:id/children --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listChildren.func1 (7 handlers)
-[GIN-debug] GET    /api/v1/directories/:id/parents --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listParents.func1 (7 handlers)
-[GIN-debug] GET    /api/v1/directories/:id/parents/:until --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listParentsUntil.func1 (7 handlers)
-{"level":"info","ts":1673469132.733697,"caller":"common/common.go:129","msg":"listening on","app":"treemanager","version":"unknown","address":":8080"}
+[GIN-debug] GET    /api/v1                   --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.apiVersionHandler (8 handlers)
+[GIN-debug] GET    /api/v1/roots             --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listRoots.func1 (8 handlers)
+[GIN-debug] POST   /api/v1/roots             --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.createRootDirectory.func1 (8 handlers)
+[GIN-debug] GET    /api/v1/directories/:id   --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.getDirectory.func1 (8 handlers)
+[GIN-debug] POST   /api/v1/directories/:id   --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.createDirectory.func1 (8 handlers)
+[GIN-debug] DELETE /api/v1/directories/:id   --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.deleteDirectory.func1 (8 handlers)
+[GIN-debug] GET    /api/v1/directories/:id/children --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listChildren.func1 (8 handlers)
+[GIN-debug] GET    /api/v1/directories/:id/parents --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listParents.func1 (8 handlers)
+[GIN-debug] GET    /api/v1/directories/:id/parents/:until --> github.com/infratographer/fertilesoil/internal/httpsrv/treemanager.listParentsUntil.func1 (8 handlers)
+{"level":"info","ts":1674847681.642747,"caller":"common/common.go:129","msg":"listening on","app":"treemanager","version":"unknown","address":":8080"}
 ```
 
 Run `make help` for additional useful commands.
+
+Now you can test your connection with:
+
+```shell
+$ BEARER="eyJraWQiO...SNIP...bTSVi5a6w"
+$ curl -H "Authorization: Bearer $BEARER" localhost:8080/api/v1/roots
+{"directories":null,"version":"v1"}
+```

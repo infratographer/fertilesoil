@@ -15,6 +15,13 @@ CONTAINER_TAG?=latest
 # OpenAPI settings
 OAPI_CODEGEN_CMD?=go run github.com/deepmap/oapi-codegen/cmd/oapi-codegen
 
+# Dev infra OAuth2 settings
+DEV_OAUTH2_ADDR=localhost:8082
+DEV_OAUTH2_ISSUER=fertilesoil
+DEV_OAUTH2_SCOPE=test
+DEV_OAUTH2_SUB=fertilesoil
+DEV_OAUTH2_AUD=fertilesoil
+
 # go files to be checked
 GO_FILES=$(shell git ls-files '*.go')
 
@@ -51,8 +58,8 @@ clean: dev-infra-down  ## Cleans generated files.
 	@rm -f coverage.out
 	@go clean -testcache
 	@rm -rf $(TOOLS_DIR)
-	@rm -f nkey.key nkey.pub
-	@rm -f .audit/audit.log
+	@rm -f .dc-data/audit/audit.log
+	@rm -f .dc-data/nkey.key .dc-data/nkey.pub .dc-data/oauth2.json
 
 vendor:  ## Downloads and tidies go modules.
 	@go mod download
@@ -92,25 +99,62 @@ openapi-spec:  ## Generates OpenAPI specs.
 		-generate spec \
 		-o api/v1/openapi.gen.go treeman-openapi-v1.yaml
 
-nkey.key: | nk-tool  ## Generates a new NATS user key.
+.dc-data/nkey.key: | nk-tool
 	@echo Generating nats $@
+	@mkdir -p $(shell dirname $@)
 	@nk -gen user -pubout > $@
 
-nkey.pub: nkey.key | nk-tool  ## Exports the NATS user public key.
+.dc-data/nkey.pub: .dc-data/nkey.key | nk-tool
 	@echo Generating nats $@
+	@mkdir -p $(shell dirname $@)
 	@nk -inkey $< -pubout > $@
 
-.PHONY: nkey
-nkey: nkey.key nkey.pub  ## Generates and exports a new NATS user public and private keys.
+define OAUTH2_CONFIG
+{
+  "interactiveLogin": true,
+  "httpServer": "NettyWrapper",
+  "tokenCallbacks": [
+    {
+      "issuerId": "$(DEV_OAUTH2_ISSUER)",
+      "tokenExpiry": 120,
+      "requestMappings": [
+        {
+          "requestParam": "scope",
+          "match": "$(DEV_OAUTH2_SCOPE)",
+          "claims": {
+            "sub": "$(DEV_OAUTH2_SUB)",
+            "aud": [
+              "$(DEV_OAUTH2_AUD)"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+endef
 
-.audit:
-	@mkdir -p .audit
+.dc-data/oauth2.json: export OAUTH2_CONFIG:=$(OAUTH2_CONFIG)
+.dc-data/oauth2.json: .dc-data
+	@echo Generating OAuth2 config $@
+	@echo "$$OAUTH2_CONFIG" > $@
 
-.audit/audit.log: .audit
-	@touch .audit/audit.log
+.PHONY: dev-oauth2-token
+dev-oauth2-token:  ## Creates a new oauth2 authorization token for testing.
+	@echo Generating OAuth2 token
+	@echo Audience: $(DEV_OAUTH2_AUD)
+	@echo Issuer: http://$(DEV_OAUTH2_ADDR)/$(DEV_OAUTH2_ISSUER)
+	@echo JWKS URL: http://$(DEV_OAUTH2_ADDR)/$(DEV_OAUTH2_ISSUER)/jwks
+	@curl -s --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+		-d "grant_type=client_credentials&client_id=random&client_secret=random&scope=$(DEV_OAUTH2_SCOPE)" \
+		http://$(DEV_OAUTH2_ADDR)/$(DEV_OAUTH2_ISSUER)/token | jq -r 'to_entries[] | [.key, (.value | tostring)] | @tsv'
+
+.dc-data/audit/audit.log:
+	@mkdir -p $(shell dirname $@)
+	@touch $@
 
 .PHONY: dev-infra-up dev-infra-down
-dev-infra-up: compose.yaml nkey .audit/audit.log  ## Starts local services to simplify local development.
+dev-infra-up: compose.yaml .dc-data/nkey.key .dc-data/nkey.pub .dc-data/oauth2.json .dc-data/audit/audit.log   ## Starts local services to simplify local development.
 	@echo Starting services
 	@docker compose up -d
 
@@ -123,6 +167,9 @@ dev-infra-up: compose.yaml nkey .audit/audit.log  ## Starts local services to si
 				echo attempting again in 2 seconds; \
 				sleep 2; \
 			done
+
+	@echo
+	@echo 'Use "make dev-oauth2-token" to create a token'
 
 dev-infra-down: compose.yaml  ## Stops local services used for local development.
 	@echo Stopping services
