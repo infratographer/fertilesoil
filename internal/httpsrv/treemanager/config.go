@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/metal-toolbox/auditevent/ginaudit"
+	"go.hollow.sh/toolbox/ginjwt"
 
 	"github.com/infratographer/fertilesoil/notifier"
 	"github.com/infratographer/fertilesoil/notifier/noop"
@@ -18,6 +19,7 @@ type treeManagerConfig struct {
 	notif           notifier.Notifier
 	storageDriver   storage.DirectoryAdmin
 	auditMdw        *ginaudit.Middleware
+	authConfig      *ginjwt.AuthConfig
 }
 
 type Option func(*treeManagerConfig)
@@ -72,6 +74,13 @@ func WithStorageDriver(d storage.DirectoryAdmin) Option {
 func WithAuditMiddleware(auditMiddleware *ginaudit.Middleware) Option {
 	return func(c *treeManagerConfig) {
 		c.auditMdw = auditMiddleware
+	}
+}
+
+// WithAuthConfig sets the jwt auth config.
+func WithAuthConfig(config *ginjwt.AuthConfig) Option {
+	return func(c *treeManagerConfig) {
+		c.authConfig = config
 	}
 }
 

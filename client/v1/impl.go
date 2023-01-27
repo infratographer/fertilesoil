@@ -31,17 +31,19 @@ func newFullHTTPClient(cfg *ClientConfig) HTTPRootClient {
 		}
 	}
 
-	if cfg.unixSocket != "" {
-		cfg.client.Transport = &http.Transport{
-			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", cfg.unixSocket)
-			},
-		}
-	}
-
 	return &httpClient{
 		c:          cfg.client,
 		managerURL: cfg.managerURL,
+	}
+}
+
+func UnixClient(socket string) *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", socket)
+			},
+		},
 	}
 }
 
@@ -267,6 +269,7 @@ func (c *httpClient) DoRaw(
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
+
 	return c.c.Do(req)
 }
 

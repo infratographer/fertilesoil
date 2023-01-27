@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/metal-toolbox/auditevent/ginaudit"
 	"github.com/stretchr/testify/assert"
+	"go.hollow.sh/toolbox/ginjwt"
 	"go.uber.org/zap"
 
 	apiv1 "github.com/infratographer/fertilesoil/api/v1"
@@ -29,7 +30,12 @@ const (
 	defaultShutdownTime = 1 * time.Second
 )
 
-func newTestServer(t *testing.T, skt string, store storage.DirectoryAdmin, w io.Writer) *common.Server {
+func newTestServer(t *testing.T,
+	skt string,
+	store storage.DirectoryAdmin,
+	authConfig *ginjwt.AuthConfig,
+	w io.Writer,
+) *common.Server {
 	t.Helper()
 
 	if store == nil {
@@ -52,6 +58,7 @@ func newTestServer(t *testing.T, skt string, store storage.DirectoryAdmin, w io.
 		treemanager.WithNotifier(nil),
 		treemanager.WithStorageDriver(store),
 		treemanager.WithAuditMiddleware(mdw),
+		treemanager.WithAuthConfig(authConfig),
 	)
 
 	return tm
@@ -82,7 +89,7 @@ func TestRootOperations(t *testing.T) {
 	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
 
-	srv := newTestServer(t, skt, nil, auditBuf)
+	srv := newTestServer(t, skt, nil, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -91,7 +98,7 @@ func TestRootOperations(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, getStubServerAddress(t, skt))
+	cli := testutils.NewTestClient(t, skt, getStubServerAddress(t, skt), nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -124,7 +131,7 @@ func TestDirectoryOperations(t *testing.T) {
 	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
 
-	srv := newTestServer(t, skt, nil, auditBuf)
+	srv := newTestServer(t, skt, nil, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -133,7 +140,7 @@ func TestDirectoryOperations(t *testing.T) {
 
 	go testutils.RunTestServer(t, srv)
 
-	cli := testutils.NewTestClient(t, skt, getStubServerAddress(t, skt))
+	cli := testutils.NewTestClient(t, skt, getStubServerAddress(t, skt), nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -211,7 +218,7 @@ func TestErroneousCalls(t *testing.T) {
 	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
 
-	srv := newTestServer(t, skt, nil, auditBuf)
+	srv := newTestServer(t, skt, nil, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -221,7 +228,7 @@ func TestErroneousCalls(t *testing.T) {
 	go testutils.RunTestServer(t, srv)
 
 	srvAddr := getStubServerAddress(t, skt)
-	cli := testutils.NewTestClient(t, skt, srvAddr)
+	cli := testutils.NewTestClient(t, skt, srvAddr, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -234,7 +241,7 @@ func TestInvalidDirectoryIDs(t *testing.T) {
 	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
 
-	srv := newTestServer(t, skt, nil, auditBuf)
+	srv := newTestServer(t, skt, nil, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -244,7 +251,7 @@ func TestInvalidDirectoryIDs(t *testing.T) {
 	go testutils.RunTestServer(t, srv)
 
 	srvAddr := getStubServerAddress(t, skt)
-	cli := testutils.NewTestClient(t, skt, srvAddr)
+	cli := testutils.NewTestClient(t, skt, srvAddr, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -257,7 +264,7 @@ func TestErroneousDirectories(t *testing.T) {
 	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
 
-	srv := newTestServer(t, skt, nil, auditBuf)
+	srv := newTestServer(t, skt, nil, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -267,7 +274,7 @@ func TestErroneousDirectories(t *testing.T) {
 	go testutils.RunTestServer(t, srv)
 
 	srvAddr := getStubServerAddress(t, skt)
-	cli := testutils.NewTestClient(t, skt, srvAddr)
+	cli := testutils.NewTestClient(t, skt, srvAddr, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -280,7 +287,7 @@ func TestDirectoryNotFound(t *testing.T) {
 	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
 
-	srv := newTestServer(t, skt, nil, auditBuf)
+	srv := newTestServer(t, skt, nil, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -290,7 +297,7 @@ func TestDirectoryNotFound(t *testing.T) {
 	go testutils.RunTestServer(t, srv)
 
 	srvAddr := getStubServerAddress(t, skt)
-	cli := testutils.NewTestClient(t, skt, srvAddr)
+	cli := testutils.NewTestClient(t, skt, srvAddr, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -303,7 +310,7 @@ func TestDeleteDirectory(t *testing.T) {
 	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
 
-	srv := newTestServer(t, skt, nil, auditBuf)
+	srv := newTestServer(t, skt, nil, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -313,7 +320,7 @@ func TestDeleteDirectory(t *testing.T) {
 	go testutils.RunTestServer(t, srv)
 
 	srvAddr := getStubServerAddress(t, skt)
-	cli := testutils.NewTestClient(t, skt, srvAddr)
+	cli := testutils.NewTestClient(t, skt, srvAddr, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -328,7 +335,7 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 
 	store, dirMap := newMemoryStorage(t)
 
-	srv := newTestServer(t, skt, store, auditBuf)
+	srv := newTestServer(t, skt, store, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -338,7 +345,7 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 	go testutils.RunTestServer(t, srv)
 
 	srvAddr := getStubServerAddress(t, skt)
-	cli := testutils.NewTestClient(t, skt, srvAddr)
+	cli := testutils.NewTestClient(t, skt, srvAddr, nil)
 
 	testutils.WaitForServer(t, cli)
 
@@ -464,4 +471,64 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 	// We shouldn't reveal to the user the error.
 	// Instead, it should only be logged and viewed by admins.
 	assert.NotContains(t, err.Error(), "is not of type", "error contains directory ID")
+}
+
+func TestAuthRequired(t *testing.T) {
+	t.Parallel()
+
+	jwksURI := ginjwt.TestHelperJWKSProvider(ginjwt.TestPrivRSAKey1ID, ginjwt.TestPrivRSAKey2ID)
+
+	authConfig := &ginjwt.AuthConfig{
+		Enabled:  true,
+		Audience: "ginjwt.test",
+		Issuer:   "ginjwt.test.issuer",
+		JWKSURI:  jwksURI,
+	}
+
+	skt := testutils.NewUnixsocketPath(t)
+	srv := newTestServer(t, skt, nil, authConfig, nil)
+
+	defer func() {
+		err := srv.Shutdown()
+		assert.NoError(t, err, "error shutting down server")
+	}()
+
+	go testutils.RunTestServer(t, srv)
+
+	// Test without auth code
+
+	cli := testutils.NewTestClient(t, skt, getStubServerAddress(t, skt), nil)
+
+	testutils.WaitForServer(t, cli)
+
+	// Create root without authentication
+	_, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
+		Version: apiv1.APIVersion,
+		Name:    "root",
+	})
+	assert.Error(t, err, "expected auth error")
+
+	// List roots without authentication
+	_, err = cli.ListRoots(context.Background())
+	assert.Error(t, err, "expected auth error")
+
+	// Tests with auth
+
+	cli = testutils.NewTestClient(t, skt, getStubServerAddress(t, skt), authConfig)
+
+	testutils.WaitForServer(t, cli)
+
+	// Create a new root.
+	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
+		Version: apiv1.APIVersion,
+		Name:    "root",
+	})
+	assert.NoError(t, err, "error creating root")
+	assert.NotNil(t, rd, "root directory is nil")
+
+	// Get the root.
+	listroots, err := cli.ListRoots(context.Background())
+	assert.NoError(t, err, "error listing roots")
+
+	assert.Equal(t, 1, len(listroots.Directories), "expected 1 root, got %d", len(listroots.Directories))
 }

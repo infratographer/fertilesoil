@@ -15,6 +15,7 @@ import (
 	"github.com/metal-toolbox/auditevent/helpers"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.hollow.sh/toolbox/ginjwt"
 	"go.infratographer.com/x/ginx"
 	"go.infratographer.com/x/loggingx"
 	"go.infratographer.com/x/viperx"
@@ -47,6 +48,7 @@ func init() {
 	v := viper.GetViper()
 	dbutils.RegisterDBArgs(v, serveCmd.Flags())
 	ginx.MustViperFlags(v, serveCmd.Flags(), treemanager.DefaultTreeManagerListen)
+	ginjwt.RegisterViperOIDCFlags(v, serveCmd)
 	loggingx.MustViperFlags(v, serveCmd.Flags())
 	natsutils.RegisterNATSArgs(v, serveCmd.Flags())
 
@@ -120,6 +122,8 @@ func serverRunE(cmd *cobra.Command, args []string) error {
 		return notiferr
 	}
 
+	authConfig := buildAuthConfig(v)
+
 	store := driver.NewDirectoryDriver(db, dbutils.WithStorageOptions(v)...)
 
 	s := treemanager.NewServer(
@@ -132,6 +136,7 @@ func serverRunE(cmd *cobra.Command, args []string) error {
 		treemanager.WithNotifier(notif),
 		treemanager.WithStorageDriver(store),
 		treemanager.WithAuditMiddleware(mdw),
+		treemanager.WithAuthConfig(authConfig),
 	)
 
 	go func() {
@@ -159,4 +164,36 @@ func initLogger() *zap.Logger {
 	})
 
 	return sl.Desugar()
+}
+
+func buildAuthConfig(v *viper.Viper) *ginjwt.AuthConfig {
+	var (
+		jwksuri string
+		issuer  string
+	)
+
+	jwksuris := v.GetStringSlice("oidc.jwksuri")
+
+	if len(jwksuris) != 0 {
+		jwksuri = jwksuris[0]
+	}
+
+	issuers := v.GetStringSlice("oidc.issuer")
+
+	if len(issuers) != 0 {
+		issuer = issuers[0]
+	}
+
+	authConfig := &ginjwt.AuthConfig{
+		Enabled:                v.GetBool("oidc.enabled"),
+		Audience:               v.GetString("oidc.audience"),
+		Issuer:                 issuer,
+		JWKSURI:                jwksuri,
+		JWKSRemoteTimeout:      v.GetDuration("oidc.jwksremotetimeout"),
+		RoleValidationStrategy: ginjwt.RoleValidationStrategy(v.GetString("oidc.rolevalidationstrategy")),
+		RolesClaim:             v.GetString("oidc.claims.roles"),
+		UsernameClaim:          v.GetString("oidc.claims.username"),
+	}
+
+	return authConfig
 }
