@@ -373,6 +373,8 @@ github.com/pressly/goose/v3 v3.7.0 h1:jblaZul15uCIEKHRu5KUdA+5wDA7E60JC0TOthdrtf
 github.com/pressly/goose/v3 v3.7.0/go.mod h1:N5gqPdIzdxf3BiPWdmoPreIwHStkxsvKWE5xjUvfYNk=
 github.com/pressly/goose/v3 v3.8.0 h1:t9c6vXn3wEGtkhr30W1uQE+AcY9bj9SQP1gCvoDzZko=
 github.com/pressly/goose/v3 v3.8.0/go.mod h1:+/6BqhGx7bt3cRK22Hm3BsJXF2/2gQAhO/xExNG5cSA=
+github.com/pressly/goose/v3 v3.9.0 h1:3LB3zjt9zTebK+URKuCdGAxPwtpJfyVlalrzCzcVAtA=
+github.com/pressly/goose/v3 v3.9.0/go.mod h1:+/6BqhGx7bt3cRK22Hm3BsJXF2/2gQAhO/xExNG5cSA=
 github.com/prometheus/client_golang v1.14.0 h1:nJdhIvne2eSX/XRAFV9PcvFFRbrjbcTUj0VP62TMhnw=
 github.com/prometheus/client_golang v1.14.0/go.mod h1:8vpkKitgIVNcqrRBWh1C4TIUQgYNtG/XQE4E/Zae36Y=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=

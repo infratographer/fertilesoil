@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/nats-io/nats-server/v2 v2.9.11
 	github.com/nats-io/nats.go v1.23.0
-	github.com/pressly/goose/v3 v3.8.0
+	github.com/pressly/goose/v3 v3.9.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
