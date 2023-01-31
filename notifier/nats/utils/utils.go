@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/nats-io/nats.go"
@@ -20,6 +21,9 @@ func RegisterNATSArgs(v *viper.Viper, flags *pflag.FlagSet) {
 
 	flags.String("nats-nkey", "", "path to nkey file")
 	viperx.MustBindFlag(v, "nats.nkey", flags.Lookup("nats-nkey"))
+
+	flags.String("nats-creds", "", "path to creds file")
+	viperx.MustBindFlag(v, "nats.creds", flags.Lookup("nats-creds"))
 }
 
 func BuildNATSSubject(v *viper.Viper) string {
@@ -31,12 +35,18 @@ func BuildNATSConnFromArgs(v *viper.Viper) (*nats.Conn, error) {
 		nats.Name("fertilesoil"),
 	}
 
-	opt, err := nats.NkeyOptionFromSeed(v.GetString("nats.nkey"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to load nkey: %w", err)
-	}
+	if credsFile := v.GetString("nats.creds"); credsFile != "" {
+		opts = append(opts, nats.UserCredentials(credsFile))
+	} else if nkeysFile := v.GetString("nats.nkey"); nkeysFile != "" {
+		opt, err := nats.NkeyOptionFromSeed(v.GetString("nats.nkey"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to load nkey: %w", err)
+		}
 
-	opts = append(opts, opt)
+		opts = append(opts, opt)
+	} else {
+		return nil, errors.New("nats: nats-nkey or nats-creds must be provided")
+	}
 
 	return nats.Connect(v.GetString("nats.url"), opts...)
 }
