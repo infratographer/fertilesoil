@@ -12,13 +12,13 @@ services:
       - ./.dc-data/crdb:/cockroach/cockroach-data
 
   init-audit:
-    image: ghcr.io/metal-toolbox/audittail:v0.5.1
+    image: ghcr.io/metal-toolbox/audittail:v0.5.2
     command: init -f /app-audit/audit.log
     volumes:
       - ./.audit:/app-audit
 
   audit:
-    image: ghcr.io/metal-toolbox/audittail:v0.5.1
+    image: ghcr.io/metal-toolbox/audittail:v0.5.2
     command: -f /app-audit/audit.log
     depends_on:
       - init-audit
