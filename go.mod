@@ -21,7 +21,7 @@ require (
 	go.hollow.sh/toolbox v0.4.1
 	go.infratographer.com/x v0.0.2
 	go.uber.org/zap v1.24.0
-	golang.org/x/oauth2 v0.3.0
+	golang.org/x/oauth2 v0.4.0
 	gopkg.in/square/go-jose.v2 v2.6.0
 )
 
