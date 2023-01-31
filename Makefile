@@ -52,6 +52,7 @@ clean: dev-infra-down  ## Cleans generated files.
 	@go clean -testcache
 	@rm -rf $(TOOLS_DIR)
 	@rm -f nkey.key nkey.pub
+	@rm -f .audit/audit.log
 
 vendor:  ## Downloads and tidies go modules.
 	@go mod download
@@ -102,8 +103,14 @@ nkey.pub: nkey.key | nk-tool  ## Exports the NATS user public key.
 .PHONY: nkey
 nkey: nkey.key nkey.pub  ## Generates and exports a new NATS user public and private keys.
 
+.audit:
+	@mkdir -p .audit
+
+.audit/audit.log: .audit
+	@touch .audit/audit.log
+
 .PHONY: dev-infra-up dev-infra-down
-dev-infra-up: compose.yaml nkey  ## Starts local services to simplify local development.
+dev-infra-up: compose.yaml nkey .audit/audit.log  ## Starts local services to simplify local development.
 	@echo Starting services
 	@docker compose up -d
 

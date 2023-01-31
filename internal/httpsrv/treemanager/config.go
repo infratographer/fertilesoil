@@ -3,6 +3,8 @@ package treemanager
 import (
 	"time"
 
+	"github.com/metal-toolbox/auditevent/ginaudit"
+
 	"github.com/infratographer/fertilesoil/notifier"
 	"github.com/infratographer/fertilesoil/notifier/noop"
 	"github.com/infratographer/fertilesoil/storage"
@@ -15,6 +17,7 @@ type treeManagerConfig struct {
 	shutdownTimeout time.Duration
 	notif           notifier.Notifier
 	storageDriver   storage.DirectoryAdmin
+	auditMdw        *ginaudit.Middleware
 }
 
 type Option func(*treeManagerConfig)
@@ -63,6 +66,12 @@ func WithNotifier(n notifier.Notifier) Option {
 func WithStorageDriver(d storage.DirectoryAdmin) Option {
 	return func(c *treeManagerConfig) {
 		c.storageDriver = d
+	}
+}
+
+func WithAuditMiddleware(auditMiddleware *ginaudit.Middleware) Option {
+	return func(c *treeManagerConfig) {
+		c.auditMdw = auditMiddleware
 	}
 }
 
