@@ -11,6 +11,21 @@ services:
     volumes:
       - ./.dc-data/crdb:/cockroach/cockroach-data
 
+  init-audit:
+    image: ghcr.io/metal-toolbox/audittail:v0.5.1
+    command: init -f /app-audit/audit.log
+    volumes:
+      - ./.audit:/app-audit
+
+  audit:
+    image: ghcr.io/metal-toolbox/audittail:v0.5.1
+    command: -f /app-audit/audit.log
+    depends_on:
+      - init-audit
+    volumes:
+      - ./.audit:/app-audit
+    restart: unless-stopped
+
   nats:
     image: nats:2-alpine
     command:

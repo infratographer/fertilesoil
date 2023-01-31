@@ -158,7 +158,7 @@ You may then run treeman:
 $ export FERTILESOIL_CRDB_HOST=localhost:26257
 $ export FERTILESOIL_CRDB_USER=root
 $ export FERTILESOIL_CRDB_PARAMS=sslmode=disable
-$ go run ./main.go serve --nats-url 127.0.0.1:4222 --nats-nkey nkey.key
+$ go run ./main.go serve --nats-url 127.0.0.1:4222 --nats-nkey nkey.key --audit-log-path ./.audit/audit.log
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:   export GIN_MODE=release
  - using code:  gin.SetMode(gin.ReleaseMode)

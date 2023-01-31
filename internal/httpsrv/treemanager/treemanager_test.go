@@ -2,12 +2,15 @@ package treemanager_test
 
 import (
 	"context"
+	"io"
 	"net/url"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/metal-toolbox/auditevent/ginaudit"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
@@ -26,7 +29,7 @@ const (
 	defaultShutdownTime = 1 * time.Second
 )
 
-func newTestServer(t *testing.T, skt string, store storage.DirectoryAdmin) *common.Server {
+func newTestServer(t *testing.T, skt string, store storage.DirectoryAdmin, w io.Writer) *common.Server {
 	t.Helper()
 
 	if store == nil {
@@ -35,6 +38,8 @@ func newTestServer(t *testing.T, skt string, store storage.DirectoryAdmin) *comm
 
 	tl, err := zap.NewDevelopment()
 	assert.NoError(t, err, "error creating logger")
+
+	mdw := ginaudit.NewJSONMiddleware("test", w)
 
 	tm := treemanager.NewServer(
 		tl,
@@ -46,6 +51,7 @@ func newTestServer(t *testing.T, skt string, store storage.DirectoryAdmin) *comm
 		// this sets up a correct notifier undearneath even if it's nil.
 		treemanager.WithNotifier(nil),
 		treemanager.WithStorageDriver(store),
+		treemanager.WithAuditMiddleware(mdw),
 	)
 
 	return tm
@@ -73,8 +79,10 @@ func getStubServerAddress(t *testing.T, skt string) *url.URL {
 func TestRootOperations(t *testing.T) {
 	t.Parallel()
 
+	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
-	srv := newTestServer(t, skt, nil)
+
+	srv := newTestServer(t, skt, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -95,9 +103,17 @@ func TestRootOperations(t *testing.T) {
 	assert.NoError(t, err, "error creating root")
 	assert.NotNil(t, rd, "root directory is nil")
 
+	// Check that we have an audit log for this
+	assert.Contains(t, auditBuf.String(), "POST:/api/v1/roots")
+	auditBuf.Reset()
+
 	// Get the root.
 	listroots, err := cli.ListRoots(context.Background())
 	assert.NoError(t, err, "error listing roots")
+
+	// Check that we have an audit log for this
+	assert.Contains(t, auditBuf.String(), "GET:/api/v1/roots")
+	auditBuf.Reset()
 
 	assert.Equal(t, 1, len(listroots.Directories), "expected 1 root, got %d", len(listroots.Directories))
 }
@@ -105,8 +121,10 @@ func TestRootOperations(t *testing.T) {
 func TestDirectoryOperations(t *testing.T) {
 	t.Parallel()
 
+	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
-	srv := newTestServer(t, skt, nil)
+
+	srv := newTestServer(t, skt, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -126,6 +144,10 @@ func TestDirectoryOperations(t *testing.T) {
 	})
 	assert.NoError(t, err, "error creating root")
 	assert.NotNil(t, rd, "root directory is nil")
+
+	// Check that we have an audit log for this
+	assert.Contains(t, auditBuf.String(), "POST:/api/v1/roots")
+	auditBuf.Reset()
 
 	// Create a new directory.
 	d, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
@@ -135,10 +157,18 @@ func TestDirectoryOperations(t *testing.T) {
 	assert.NoError(t, err, "error creating directory")
 	assert.NotNil(t, d, "directory is nil")
 
+	// Check that we have an audit log for this
+	assert.Contains(t, auditBuf.String(), "POST:/api/v1/directories")
+	auditBuf.Reset()
+
 	// Get the directory.
 	retd, err := cli.GetDirectory(context.Background(), d.Directory.Id)
 	assert.NoError(t, err, "error getting directory")
 	assert.NotNil(t, retd, "directory is nil")
+
+	// Check that we have an audit log for this
+	assert.Contains(t, auditBuf.String(), "GET:/api/v1/directories")
+	auditBuf.Reset()
 
 	// directory should be the same as the one we created.
 	assert.Equal(t, d.Directory.Id, retd.Directory.Id, "directory is not the same")
@@ -178,8 +208,10 @@ func TestDirectoryOperations(t *testing.T) {
 func TestErroneousCalls(t *testing.T) {
 	t.Parallel()
 
+	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
-	srv := newTestServer(t, skt, nil)
+
+	srv := newTestServer(t, skt, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -199,8 +231,10 @@ func TestErroneousCalls(t *testing.T) {
 func TestInvalidDirectoryIDs(t *testing.T) {
 	t.Parallel()
 
+	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
-	srv := newTestServer(t, skt, nil)
+
+	srv := newTestServer(t, skt, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -220,8 +254,10 @@ func TestInvalidDirectoryIDs(t *testing.T) {
 func TestErroneousDirectories(t *testing.T) {
 	t.Parallel()
 
+	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
-	srv := newTestServer(t, skt, nil)
+
+	srv := newTestServer(t, skt, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -241,8 +277,10 @@ func TestErroneousDirectories(t *testing.T) {
 func TestDirectoryNotFound(t *testing.T) {
 	t.Parallel()
 
+	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
-	srv := newTestServer(t, skt, nil)
+
+	srv := newTestServer(t, skt, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -262,8 +300,10 @@ func TestDirectoryNotFound(t *testing.T) {
 func TestDeleteDirectory(t *testing.T) {
 	t.Parallel()
 
+	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
-	srv := newTestServer(t, skt, nil)
+
+	srv := newTestServer(t, skt, nil, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -283,11 +323,12 @@ func TestDeleteDirectory(t *testing.T) {
 func TestErrorDoesntLeakInfo(t *testing.T) {
 	t.Parallel()
 
+	auditBuf := &strings.Builder{}
 	skt := testutils.NewUnixsocketPath(t)
 
 	store, dirMap := newMemoryStorage(t)
 
-	srv := newTestServer(t, skt, store)
+	srv := newTestServer(t, skt, store, auditBuf)
 
 	defer func() {
 		err := srv.Shutdown()
@@ -315,6 +356,10 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 	assert.Error(t, err, "expected error listing roots")
 	assert.Nil(t, resp, "expected nil response")
 
+	// Check that we have an audit log for this
+	assert.Contains(t, auditBuf.String(), "GET:/api/v1/roots")
+	auditBuf.Reset()
+
 	// We shouldn't reveal to the user the error.
 	// Instead, it should only be logged and viewed by admins.
 	assert.NotContains(t, err.Error(), "is not of type", "error contains directory ID")
@@ -323,6 +368,11 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 	respget, err := cli.GetDirectory(context.Background(), id)
 	assert.Error(t, err, "expected error getting directory")
 	assert.Nil(t, respget, "expected nil response")
+
+	// Check that we have an audit log for this
+	assert.Contains(t, auditBuf.String(), "GET:/api/v1/directories")
+	assert.Contains(t, auditBuf.String(), "failed")
+	auditBuf.Reset()
 
 	// We shouldn't reveal to the user the error.
 	// Instead, it should only be logged and viewed by admins.

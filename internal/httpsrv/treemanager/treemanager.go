@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/metal-toolbox/auditevent/ginaudit"
 	"go.uber.org/zap"
 
 	v1 "github.com/infratographer/fertilesoil/api/v1"
@@ -33,13 +34,17 @@ func NewServer(
 
 	s := common.NewServer(logger, cfg.listen, db, store, cfg.debug, cfg.shutdownTimeout, cfg.unix)
 
-	s.SetHandler(newHandler(logger, s))
+	s.SetHandler(newHandler(logger, s, cfg.auditMdw))
 
 	return s
 }
 
-func newHandler(logger *zap.Logger, s *common.Server) *gin.Engine {
+func newHandler(logger *zap.Logger, s *common.Server, auditMdw *ginaudit.Middleware) *gin.Engine {
 	r := s.DefaultEngine(logger)
+
+	if auditMdw != nil {
+		r.Use(auditMdw.Audit())
+	}
 
 	r.GET("/api", apiVersionHandler)
 	r.GET("/api/v1", apiVersionHandler)

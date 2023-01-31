@@ -5,3 +5,4 @@ coverage.out
 nkey.key
 nkey.pub
 .dc-data/
+.audit/

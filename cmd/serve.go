@@ -6,10 +6,13 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 
+	"github.com/metal-toolbox/auditevent/ginaudit"
+	"github.com/metal-toolbox/auditevent/helpers"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.infratographer.com/x/ginx"
@@ -65,6 +68,10 @@ func init() {
 		treemanager.DefaultTreeManagerUnix,
 		"Listen on a unix socket instead of a TCP socket.")
 	viperx.MustBindFlag(v, "server.unix_socket", flags.Lookup("server-unix-socket"))
+
+	// audit log path
+	flags.String("audit-log-path", "/app-audit/audit.log", "Path to the audit log file")
+	viperx.MustBindFlag(v, "audit.log.path", flags.Lookup("audit-log-path"))
 }
 
 func serverRunE(cmd *cobra.Command, args []string) error {
@@ -90,6 +97,17 @@ func serverRunE(cmd *cobra.Command, args []string) error {
 
 	v := viper.GetViper()
 
+	auditLogPath := v.GetString("audit.log.path")
+	fd, err := helpers.OpenAuditLogFileUntilSuccessWithContext(ctx, auditLogPath)
+	if err != nil {
+		return fmt.Errorf("failed to open audit log file: %w", err)
+	}
+	// The file descriptor shall be closed only if the gin server is shut down
+	defer fd.Close()
+
+	// Set up middleware with the file descriptor
+	mdw := ginaudit.NewJSONMiddleware("tree-manager", fd)
+
 	natconn, natserr := natsutils.BuildNATSConnFromArgs(v)
 	if natserr != nil {
 		return natserr
@@ -113,6 +131,7 @@ func serverRunE(cmd *cobra.Command, args []string) error {
 		treemanager.WithShutdownTimeout(v.GetDuration("server.shutdown")),
 		treemanager.WithNotifier(notif),
 		treemanager.WithStorageDriver(store),
+		treemanager.WithAuditMiddleware(mdw),
 	)
 
 	go func() {
