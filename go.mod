@@ -10,7 +10,7 @@ require (
 	github.com/gin-gonic/gin v1.8.2
 	github.com/google/uuid v1.3.0
 	github.com/metal-toolbox/auditevent v0.5.2
-	github.com/nats-io/nats-server/v2 v2.9.12
+	github.com/nats-io/nats-server/v2 v2.9.14
 	github.com/nats-io/nats.go v1.23.0
 	github.com/pressly/goose/v3 v3.9.0
 	github.com/spf13/cobra v1.6.1
