@@ -18,7 +18,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.1
 	github.com/zsais/go-gin-prometheus v0.1.0
-	go.hollow.sh/toolbox v0.4.1
+	go.hollow.sh/toolbox v0.5.1
 	go.infratographer.com/x v0.0.2
 	go.uber.org/zap v1.24.0
 	golang.org/x/oauth2 v0.5.0
