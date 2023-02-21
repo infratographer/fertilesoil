@@ -32,7 +32,7 @@ const (
 // NewController creates a new controller.
 // It takes a base directory and a list of options.
 // The base directory can be any directory in the directory tree.
-func newController(baseDir apiv1.DirectoryID, opts ...Option) (Controller, error) {
+func newController(baseDir apiv1.DirectoryID, opts ...Option) (*controller, error) {
 	c := &controller{
 		baseDir: baseDir,
 		// full reconcile interval and duration
@@ -88,10 +88,15 @@ func (c *controller) Run(ctx context.Context) error {
 	// initialize ticker to check for updates at a random interval
 	ticker := time.NewTicker(c.getRandomTickerDuration())
 
-	// initialize directories
-	err := c.initializeDirectories(ctx)
-	if err != nil {
-		return err
+	if c.c != nil {
+		// initialize directories
+		err := c.InitializeDirectories(ctx)
+		if err != nil {
+			return err
+		}
+	} else {
+		// if there is no client, we don't need to check for updates
+		ticker.Stop()
 	}
 
 	// start watching for events
@@ -101,7 +106,7 @@ func (c *controller) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			err := c.initializeDirectories(ctx)
+			err := c.InitializeDirectories(ctx)
 			if err != nil {
 				return err
 			}
@@ -116,47 +121,6 @@ func (c *controller) Run(ctx context.Context) error {
 			}
 		}
 	}
-}
-
-func (c *controller) initializeDirectories(ctx context.Context) error {
-	err := c.persistIfUpToDate(ctx, c.baseDir)
-	if err != nil {
-		return err
-	}
-
-	// check if all subdirs are tracked and up-to-date, else, persist them.
-	subdirs, err := c.c.GetChildren(ctx, c.baseDir)
-	if err != nil {
-		return err
-	}
-
-	for _, subdir := range subdirs.Directories {
-		err := c.persistIfUpToDate(ctx, subdir)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (c *controller) persistIfUpToDate(ctx context.Context, dir apiv1.DirectoryID) error {
-	fd, err := c.c.GetDirectory(ctx, dir)
-	if err != nil {
-		return err
-	}
-
-	d := &fd.Directory
-	upToDate, err := c.store.IsDirectoryInfoUpdated(ctx, d)
-	if err != nil {
-		return err
-	}
-
-	if upToDate {
-		return nil
-	}
-
-	return c.persistDirectory(ctx, d)
 }
 
 // persistDirectory persists the directory in the store.

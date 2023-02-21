@@ -131,6 +131,13 @@ to get started. The `appv1sql` package provides a SQL implementation of the
 `appv1.AppStorage` interface. The `cv1nats` package provides a NATS
 implementation of the `clientv1.Watcher` interface. The `clientv1` package
 provides a HTTP implementation of the `clientv1.ReadOnlyClient` interface.
+The client serves the purpose of allowing to do full reconciliation loops
+on the directory structure without having to fully rely on the watcher.
+
+The controller will do a full reconciliation loop on the directory tree when it
+starts, as well as at a random interval between 5 and 15 minutes. This is to
+ensure that the application is aware of all directories that are relevant to it.
+Note that the interval is configurable.
 
 The reconciler is the most important component of the application framework.
 It is responsible for ensuring that the application is in sync
@@ -167,3 +174,58 @@ func (r *Reconciler) Reconcile(ctx context.Context, evt apiv1.DirectoryEvent) er
 
 Note that the `Reconcile` method will only be called if there are changes to
 a particular directory.
+
+### Fully relying on the event queue
+
+It is possible for the controller to fully rely on the event queue and not
+have to do full reconciliation loops. To get such a setup, you need to
+omit the `appv1.WithClient` option when initializing the controller.
+
+```go
+	// Note that we're omitting the WithClient option
+	ctrl, err := appv1.NewController(
+		baseDirID,
+		appv1.WithStorage(appStore),
+		appv1.WithWatcher(watcher),
+		appv1.WithReconciler(r),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create directory controller: %w", err)
+	}
+```
+
+This will ensure that the controller will only receive events from the
+event queue and not do full reconciliation loops.
+
+It is important to note that the controller will still need to have some
+notion of an initial directory structure. So, the framework also provides
+a way to seed the initial directory structure and re-initialize it as
+needed. This is done through the `appv1.Seeder` interface.
+
+```go
+import (
+	appv1 "github.com/infratographer/fertilesoil/app/v1"
+)
+
+func main() {
+	// Initialize variables...
+
+	fullrec, err := appv1.NewSeeder(baseDirID, dirclient, appstore)
+	if err != nil {
+		return fmt.Errorf("failed to create seeder: %w", err)
+	}
+
+	err = fullrec.InitializeDirectories(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to initialize directories: %w", err)
+	}
+}
+```
+
+Having a seeder is not required, but it is recommended. The seeder will
+ensure that the application is aware of the directories that are relevant
+to it.
+
+One would normally trigger the seeder either when the application starts,
+or when the application is restarted to ensure state is kept and propagated.
+This can be done via a Kubernetes `Job` or an `initContainer`.
