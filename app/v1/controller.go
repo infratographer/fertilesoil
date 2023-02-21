@@ -32,7 +32,9 @@ type Controller interface {
 type ControllerBuilder func(baseDir apiv1.DirectoryID, opts ...Option) (Controller, error)
 
 // NewController is the default implementation of ControllerBuilder.
-var NewController ControllerBuilder = newController
+var NewController ControllerBuilder = func(baseDir apiv1.DirectoryID, opts ...Option) (Controller, error) {
+	return newController(baseDir, opts...)
+}
 
 // Option is a function that configures the controller.
 type Option func(*controller)
@@ -58,3 +60,17 @@ var WithWatcher = withWatcher
 // interval.
 // The default full reconcile interval is between 5 minutes and 15 minutes.
 var WithFullReconcileInterval = withFullReconcileInterval
+
+// Seeder is an interface which allows to reconcile the
+// full subtree of a directory structure.
+// This is useful when the controller is started and needs to
+// initialize the store with the current state of the directory structure.
+// An HTTP client is required to perform the reconciliation.
+type Seeder interface {
+	InitializeDirectories(ctx context.Context) error
+}
+
+// NewSeeder is a builder function that creates a new
+// FullSubtreeReconciler. It's useful for doing a full reconciler and persistence
+// of the directory tree in an application without having to start the controller.
+var NewSeeder = newSeeder
