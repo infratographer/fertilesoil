@@ -1,0 +1,134 @@
+# -- Image map
+image:
+  # -- Image registry
+  registry: ghcr.io
+  # -- Image repository
+  repository: infratographer/fertilesoil/treeman
+  # -- Image tag
+  tag: "v0.0.12"
+  # -- Image pullPolicy
+  pullPolicy: IfNotPresent
+
+# -- (int) Number of replicas to deploy
+replicaCount: 1
+
+fertilsoil:
+  env:
+    FERTILESOIL_CRDB_HOST: "localhost:26257"
+    FERTILESOIL_CRDB_USER: "root"
+    FERTILESOIL_CRDB_PARAMS: "sslmode=disable"
+    FERTILESOIL_OIDC_AUDIENCE: "fertilesoil"
+    FERTILESOIL_OIDC_ISSUER: "http://localhost:8082/fertilesoil"
+    FERTILESOIL_OIDC_JWKSURI: "http://localhost:8082/fertilesoil/jwks"
+  nats:
+    url: "127.0.0.1:4222"
+    nkey: "/data/nkey.key"
+    audit_log_path: "/app-audit/audit.log"
+
+# -- (array) container port config
+affinity: {}
+
+# -- (dict) resource limits & requests
+# ref: https://kubernetes.io/docs/user-guide/compute-resources/
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# -- Security context to be added to the deployment
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# -- (object) The service settings to use for the krakend service
+service:
+  # -- (int) The port to use for the service
+  port: 8080
+  # -- (object) The annotations to use for the service
+  annotations: {}
+
+# -- include an ingress resource
+# -- ref: https://kubernetes.io/docs/concepts/services-networking/ingress/#what-is-ingress
+ingress:
+  # -- (bool) Set to true to generate Ingress resource
+  enabled: false
+  # -- (string) options are typically nginx or nginx-external, if omited the cluster default is used
+  className: ""
+  # -- (dict) Custom Ingress annotations
+  annotations: {}
+  # some examples!
+  # cert-manager.io/cluster-issuer: letsencrypt-prod
+  # nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+  # nginx.ingress.kubernetes.io/rewrite-target: /
+  # -- (dict) Custom Ingress labels
+  labels: {}
+  # -- (list) The list of hosts to use for the ingress
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+# -- (object) The livenessProbe to use for the krakend pod
+livenessProbe:
+  httpGet:
+    path: /__health
+    port: http
+
+# -- (object) The readinessProbe to use for the krakend pod
+readinessProbe:
+  httpGet:
+    path: /__health
+    port: http
+
+# -- ServiceMonitor is how you get metrics into prometheus!
+serviceMonitor:
+  # -- (bool) Set to true to create a default ServiceMonitor for your application
+  enabled: false
+  # -- Labels to add to ServiceMonitor
+  labels: {}
+  # -- Annotations to add to ServiceMonitor
+  annotations: {}
+  # -- Interval for scrape metrics.
+  interval: 10s
+  # -- time out interval when scraping metrics
+  scrapeTimeout: 10s
+
+# -- (dict) configures metal-toolbox/audittail
+audit:
+  # -- (bool) toggles audittail
+  enabled: true
+  # -- (dict) Infomation about the audittail image
+  auditImage:
+    registry: ghcr.io
+    repository: metal-toolbox/audittail
+    tag: v0.6.1
+    pullPolicy: IfNotPresent
+  # -- (dict) Resources for the audittail container
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  init:
+    # -- (dict) Resources for the audittail init container
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi

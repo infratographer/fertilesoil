@@ -1,0 +1,13 @@
+apiVersion: v2
+appVersion: "1.0"
+description: This is a helm chart for Fertilsoil
+name: fertilesoil
+version: 0.0.1
+kubeVersion: ">=1.21"
+
+dependencies:
+  - name: common
+    repository: https://charts.bitnami.com/bitnami
+    tags:
+      - bitnami-common
+    version: 2.1.1
