@@ -62,6 +62,7 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 	return d, nil
 }
 
+// ListRoots returns all root directory ids.
 func (t *Driver) ListRoots(ctx context.Context, opts *storage.ListOptions) ([]v1.DirectoryID, error) {
 	var roots []v1.DirectoryID
 
@@ -94,6 +95,7 @@ func (t *Driver) ListRoots(ctx context.Context, opts *storage.ListOptions) ([]v1
 	return roots, nil
 }
 
+// CreateDirectory creates the provided directory.
 func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Directory, error) {
 	if t.readOnly {
 		return nil, storage.ErrReadOnly
@@ -117,6 +119,8 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 	return d, nil
 }
 
+// DeleteDirectory soft deletes the provided directory id.
+// If the provided directory has children, all child directories are soft deleted as well.
 func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) ([]*v1.Directory, error) {
 	var affected []*v1.Directory
 
@@ -188,7 +192,9 @@ WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)`)
 	return &d, nil
 }
 
-//nolint:dupl // GetParents and GetChildren are very similar but are not the same
+// GetParents returns all ids for each parent directory of the provided child id.
+//
+//nolint:dupl // GetParents and GetChildren are very similar but are not the same.
 func (t *Driver) GetParents(
 	ctx context.Context,
 	child v1.DirectoryID,
@@ -238,6 +244,8 @@ SELECT id FROM get_parents %[1]s`)
 	return parents[1:], nil
 }
 
+// GetParentsUntilAncestor returns all ids for each parent directory for the
+// provided child until the provided ancestor is reached.
 func (t *Driver) GetParentsUntilAncestor(
 	ctx context.Context,
 	child, ancestor v1.DirectoryID,
@@ -294,6 +302,8 @@ func (t *Driver) GetParentsUntilAncestor(
 	return parents[1:], nil
 }
 
+// GetChildren returns all children of the provided directory.
+//
 //nolint:dupl // GetParents and GetChildren are very similar but are not the same
 func (t *Driver) GetChildren(
 	ctx context.Context,

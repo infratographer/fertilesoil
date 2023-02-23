@@ -30,7 +30,7 @@ func (opts *ListOptions) IsWithDeleted() bool {
 	return opts.WithDeleted
 }
 
-// Converts ListOptions to the equivalent GetOptions.
+// ToGetOptions converts ListOptions to the equivalent GetOptions.
 // Useful when a list call makes an underlying get call.
 func (opts *ListOptions) ToGetOptions() *GetOptions {
 	if opts == nil {
