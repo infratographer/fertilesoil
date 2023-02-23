@@ -95,7 +95,7 @@ interface.
 ### Tree Manager
 
 A sample server implementation is provided in as the `treeman` command that's built
-as part of this project.
+as part of this project. Further documentation exists in the [Tree Manager Server](docs/server.md) doc.
 
 ### Tree Client
 
