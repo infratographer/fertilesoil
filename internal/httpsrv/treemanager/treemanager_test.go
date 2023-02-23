@@ -115,7 +115,7 @@ func TestRootOperations(t *testing.T) {
 	auditBuf.Reset()
 
 	// Get the root.
-	listroots, err := cli.ListRoots(context.Background())
+	listroots, err := cli.ListRoots(context.Background(), nil)
 	assert.NoError(t, err, "error listing roots")
 
 	// Check that we have an audit log for this
@@ -169,7 +169,7 @@ func TestDirectoryOperations(t *testing.T) {
 	auditBuf.Reset()
 
 	// Get the directory.
-	retd, err := cli.GetDirectory(context.Background(), d.Directory.Id)
+	retd, err := cli.GetDirectory(context.Background(), d.Directory.Id, nil)
 	assert.NoError(t, err, "error getting directory")
 	assert.NotNil(t, retd, "directory is nil")
 
@@ -182,7 +182,7 @@ func TestDirectoryOperations(t *testing.T) {
 	assert.Equal(t, d.Directory.Name, retd.Directory.Name, "directory is not the same")
 
 	// List the directory.
-	listd, err := cli.GetChildren(context.Background(), rd.Directory.Id)
+	listd, err := cli.GetChildren(context.Background(), rd.Directory.Id, nil)
 	assert.NoError(t, err, "error listing directories")
 	assert.NotNil(t, listd, "directory is nil")
 
@@ -190,7 +190,7 @@ func TestDirectoryOperations(t *testing.T) {
 	assert.Equal(t, 1, len(listd.Directories), "expected 1 directory, got %d", len(listd.Directories))
 
 	// Get the root as parent.
-	listrd, err := cli.GetParents(context.Background(), d.Directory.Id)
+	listrd, err := cli.GetParents(context.Background(), d.Directory.Id, nil)
 	assert.NoError(t, err, "error listing directories")
 	assert.NotNil(t, listrd, "directory is nil")
 
@@ -201,7 +201,7 @@ func TestDirectoryOperations(t *testing.T) {
 	assert.Equal(t, rd.Directory.Id, listrd.Directories[0], "directory is not the same")
 
 	// Get the root as parent with GetParentsUntil function
-	listrd, err = cli.GetParentsUntil(context.Background(), d.Directory.Id, rd.Directory.Id)
+	listrd, err = cli.GetParentsUntil(context.Background(), d.Directory.Id, rd.Directory.Id, nil)
 	assert.NoError(t, err, "error listing directories")
 	assert.NotNil(t, listrd, "directory is nil")
 
@@ -210,6 +210,22 @@ func TestDirectoryOperations(t *testing.T) {
 
 	// The directory should be the parent.
 	assert.Equal(t, rd.Directory.Id, listrd.Directories[0], "directory is not the same")
+
+	// Delete directory
+	affected, err := cli.DeleteDirectory(context.Background(), d.Directory.Id)
+	assert.NoError(t, err, "error deleting child directory")
+	assert.Equal(t, 1, len(affected.Directories), "expected 1 deleted directory, got %d", len(affected.Directories))
+
+	// Get deleted directory
+	dd, err := cli.GetDirectory(context.Background(), d.Directory.Id, &storage.GetOptions{WithDeleted: true})
+	assert.NoError(t, err, "error retrieving deleted directory")
+	assert.Equal(t, d.Directory.Id, dd.Directory.Id, "unexpected response directory")
+
+	// Get directory deleted children
+	dl, err := cli.GetChildren(context.Background(), rd.Directory.Id, &storage.ListOptions{WithDeleted: true})
+	assert.NoError(t, err, "error retrieving directory deleted children")
+	assert.Equal(t, 1, len(dl.Directories), "unexpected children count")
+	assert.Equal(t, d.Directory.Id, dl.Directories[0], "unexpected response child id")
 }
 
 func TestErroneousCalls(t *testing.T) {
@@ -359,7 +375,7 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 	})
 
 	// try to list the roots.
-	resp, err := cli.ListRoots(context.Background())
+	resp, err := cli.ListRoots(context.Background(), nil)
 	assert.Error(t, err, "expected error listing roots")
 	assert.Nil(t, resp, "expected nil response")
 
@@ -372,7 +388,7 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 	assert.NotContains(t, err.Error(), "is not of type", "error contains directory ID")
 
 	// try to get root by ID
-	respget, err := cli.GetDirectory(context.Background(), id)
+	respget, err := cli.GetDirectory(context.Background(), id, nil)
 	assert.Error(t, err, "expected error getting directory")
 	assert.Nil(t, respget, "expected nil response")
 
@@ -386,7 +402,7 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 	assert.NotContains(t, err.Error(), "is not of type", "error contains directory ID")
 
 	// try to list the children of the root.
-	resp, err = cli.GetChildren(context.Background(), id)
+	resp, err = cli.GetChildren(context.Background(), id, nil)
 	assert.Error(t, err, "expected error listing children")
 	assert.Nil(t, resp, "expected nil response")
 
@@ -395,7 +411,7 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 	assert.NotContains(t, err.Error(), "is not of type", "error contains directory ID")
 
 	// try to list the parents of the root.
-	resp, err = cli.GetParents(context.Background(), id)
+	resp, err = cli.GetParents(context.Background(), id, nil)
 	assert.Error(t, err, "expected error listing parents")
 	assert.Nil(t, resp, "expected nil response")
 
@@ -426,7 +442,7 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 	})
 
 	// try to get the directories parents.
-	resp, err = cli.GetParents(context.Background(), dirID)
+	resp, err = cli.GetParents(context.Background(), dirID, nil)
 	assert.Error(t, err, "expected error listing parents")
 	assert.Nil(t, resp, "expected nil response")
 
@@ -437,7 +453,7 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 	// try to get the directories children.
 	// Note that this will fail for the simple fact that we already
 	// have erroneous entries in the directory map.
-	resp, err = cli.GetChildren(context.Background(), dirID)
+	resp, err = cli.GetChildren(context.Background(), dirID, nil)
 	assert.Error(t, err, "expected error listing children")
 	assert.Nil(t, resp, "expected nil response")
 
@@ -464,7 +480,7 @@ func TestErrorDoesntLeakInfo(t *testing.T) {
 	// list parents until test
 	// The idea is that both the given directories are valid, but there are directories in
 	// between that are not.
-	resp, err = cli.GetParentsUntil(context.Background(), subdir2.Directory.Id, dirID)
+	resp, err = cli.GetParentsUntil(context.Background(), subdir2.Directory.Id, dirID, nil)
 	assert.Error(t, err, "expected error listing parents")
 	assert.Nil(t, resp, "expected nil response")
 
@@ -509,7 +525,7 @@ func TestAuthRequired(t *testing.T) {
 	assert.Error(t, err, "expected auth error")
 
 	// List roots without authentication
-	_, err = cli.ListRoots(context.Background())
+	_, err = cli.ListRoots(context.Background(), nil)
 	assert.Error(t, err, "expected auth error")
 
 	// Tests with auth
@@ -527,7 +543,7 @@ func TestAuthRequired(t *testing.T) {
 	assert.NotNil(t, rd, "root directory is nil")
 
 	// Get the root.
-	listroots, err := cli.ListRoots(context.Background())
+	listroots, err := cli.ListRoots(context.Background(), nil)
 	assert.NoError(t, err, "error listing roots")
 
 	assert.Equal(t, 1, len(listroots.Directories), "expected 1 root, got %d", len(listroots.Directories))

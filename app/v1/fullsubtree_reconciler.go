@@ -34,7 +34,7 @@ func (c *controller) InitializeDirectories(ctx context.Context) error {
 	}
 
 	// check if all subdirs are tracked and up-to-date, else, persist them.
-	subdirs, err := c.c.GetChildren(ctx, c.baseDir)
+	subdirs, err := c.c.GetChildren(ctx, c.baseDir, nil)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (c *controller) persistIfUpToDate(ctx context.Context, dir apiv1.DirectoryI
 		return nil
 	}
 
-	fd, err := c.c.GetDirectory(ctx, dir)
+	fd, err := c.c.GetDirectory(ctx, dir, nil)
 	if err != nil {
 		return err
 	}

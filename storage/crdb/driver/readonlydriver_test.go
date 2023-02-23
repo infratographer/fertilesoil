@@ -57,13 +57,13 @@ func TestReaderGetOneRoot(t *testing.T) {
 			store = driver.NewDirectoryDriver(db, opts...)
 
 			// retrieve from db
-			queryrootdir, qerr := store.GetDirectory(context.Background(), rd.Id)
+			queryrootdir, qerr := store.GetDirectory(context.Background(), rd.Id, nil)
 			assert.NoError(t, qerr, "error querying db")
 			assert.Equal(t, rd.Id, queryrootdir.Id, "id should match")
 			assert.Equal(t, rd.Name, queryrootdir.Name, "name should match")
 
 			// list roots returns only the root directory
-			roots, err := store.ListRoots(context.Background())
+			roots, err := store.ListRoots(context.Background(), nil)
 			assert.NoError(t, err, "error listing roots")
 			assert.Len(t, roots, 1, "should only be one root")
 			assert.Equal(t, rd.Id, roots[0], "id should match")
@@ -107,18 +107,18 @@ func TestReaderGetOneDirectory(t *testing.T) {
 			store = driver.NewDirectoryDriver(db, opts...)
 
 			// retrieve from db
-			querydir, qerr := store.GetDirectory(context.Background(), d.Id)
+			querydir, qerr := store.GetDirectory(context.Background(), d.Id, nil)
 			assert.NoError(t, qerr, "error querying db")
 			assert.Equal(t, d.Id, querydir.Id, "id should match")
 
 			// get as child of root
-			children, err := store.GetChildren(context.Background(), rd.Id)
+			children, err := store.GetChildren(context.Background(), rd.Id, nil)
 			assert.NoError(t, err, "error getting children")
 			assert.Len(t, children, 1, "should be one child")
 			assert.Equal(t, d.Id, children[0], "id should match")
 
 			// get parent
-			parent, err := store.GetParents(context.Background(), d.Id)
+			parent, err := store.GetParents(context.Background(), d.Id, nil)
 			assert.NoError(t, err, "error getting parents")
 			assert.Len(t, parent, 1, "should be one parent")
 			assert.Equal(t, rd.Id, parent[0], "id should match")

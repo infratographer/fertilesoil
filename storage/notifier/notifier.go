@@ -119,23 +119,36 @@ func (n *notifierWithStorage) CreateRoot(ctx context.Context, d *apiv1.Directory
 }
 
 // passthrough functions.
-func (n *notifierWithStorage) GetDirectory(ctx context.Context, id apiv1.DirectoryID) (*apiv1.Directory, error) {
-	return n.DirectoryAdmin.GetDirectory(ctx, id)
+func (n *notifierWithStorage) GetDirectory(
+	ctx context.Context,
+	id apiv1.DirectoryID,
+	opts *storage.GetOptions,
+) (*apiv1.Directory, error) {
+	return n.DirectoryAdmin.GetDirectory(ctx, id, opts)
 }
 
-func (n *notifierWithStorage) GetParents(ctx context.Context, id apiv1.DirectoryID) ([]apiv1.DirectoryID, error) {
-	return n.DirectoryAdmin.GetParents(ctx, id)
+func (n *notifierWithStorage) GetParents(
+	ctx context.Context,
+	id apiv1.DirectoryID,
+	opts *storage.ListOptions,
+) ([]apiv1.DirectoryID, error) {
+	return n.DirectoryAdmin.GetParents(ctx, id, opts)
 }
 
 func (n *notifierWithStorage) GetParentsUntilAncestor(ctx context.Context,
 	child apiv1.DirectoryID,
 	ancestor apiv1.DirectoryID,
+	opts *storage.ListOptions,
 ) ([]apiv1.DirectoryID, error) {
-	return n.DirectoryAdmin.GetParentsUntilAncestor(ctx, child, ancestor)
+	return n.DirectoryAdmin.GetParentsUntilAncestor(ctx, child, ancestor, opts)
 }
 
-func (n *notifierWithStorage) GetChildren(ctx context.Context, id apiv1.DirectoryID) ([]apiv1.DirectoryID, error) {
-	return n.DirectoryAdmin.GetChildren(ctx, id)
+func (n *notifierWithStorage) GetChildren(
+	ctx context.Context,
+	id apiv1.DirectoryID,
+	opts *storage.ListOptions,
+) ([]apiv1.DirectoryID, error) {
+	return n.DirectoryAdmin.GetChildren(ctx, id, opts)
 }
 
 func (n *notifierWithStorage) addWrapper(w wrapper) {

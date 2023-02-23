@@ -23,7 +23,7 @@ func TestCreateAndGetRoot(t *testing.T) {
 	rd := withRootDir(t, store)
 
 	// retrieve from db
-	queryrootdir, qerr := store.GetDirectory(context.Background(), rd.Id)
+	queryrootdir, qerr := store.GetDirectory(context.Background(), rd.Id, nil)
 	assert.NoError(t, qerr, "error querying db")
 	assert.Equal(t, rd.Id, queryrootdir.Id, "id should match")
 	assert.Equal(t, rd.Name, queryrootdir.Name, "name should match")
@@ -37,7 +37,7 @@ func TestListRootOneRoot(t *testing.T) {
 
 	rd := withRootDir(t, store)
 
-	r, err := store.ListRoots(context.Background())
+	r, err := store.ListRoots(context.Background(), nil)
 	assert.NoError(t, err, "should not have errored")
 	assert.Len(t, r, 1, "should have 1 root")
 	assert.Contains(t, r, rd.Id, "should contain root")
@@ -54,7 +54,7 @@ func TestListMultipleRoots(t *testing.T) {
 	rd3 := withRootDir(t, store)
 	rd4 := withRootDir(t, store)
 
-	r, err := store.ListRoots(context.Background())
+	r, err := store.ListRoots(context.Background(), nil)
 	assert.NoError(t, err, "should not have errored")
 	assert.Len(t, r, 4, "should have 4 roots")
 	assert.Contains(t, r, rd1.Id, "should contain root")
@@ -123,7 +123,7 @@ func TestCreateAndGetDirectory(t *testing.T) {
 	assert.Equal(t, d.Parent, rd.Parent, "parent id should match")
 
 	// retrieve from db
-	querydir, qerr := store.GetDirectory(context.Background(), rd.Id)
+	querydir, qerr := store.GetDirectory(context.Background(), rd.Id, nil)
 	assert.NoError(t, qerr, "error querying db")
 	assert.Equal(t, rd.Id, querydir.Id, "id should match")
 
@@ -215,6 +215,22 @@ func TestDeleteDirectoryWithoutChildren(t *testing.T) {
 	assert.Len(t, affected, 1, "should only have one affected row")
 	assert.Equal(t, child1dir.Id, affected[0].Id, "affected id doesn't match child id")
 	assert.NotNil(t, affected[0].DeletedAt, "DeletedAt should be set")
+
+	// Ensure Getting deleted directory errors
+	d, err := store.GetDirectory(context.Background(), child1dir.Id, nil)
+	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
+	assert.Nil(t, d, "deleted directory should not have been returned")
+
+	// Ensure deleted directories are visible when WithDeleted is true
+	opts := &storage.GetOptions{
+		WithDeleted: true,
+	}
+
+	d, err = store.GetDirectory(context.Background(), child1dir.Id, opts)
+	assert.NoError(t, err, "no error should have returned when WithDeleted is true")
+
+	assert.NotNil(t, d, "directory returned should not be nil when WithDeleted is true")
+	assert.Equal(t, child1.Id, d.Id, "id should match deleted directory")
 }
 
 func TestDeleteDirectoryWithChildren(t *testing.T) {
@@ -256,6 +272,34 @@ func TestDeleteDirectoryWithChildren(t *testing.T) {
 			t.Errorf("unexpected directory affected by deletion: %s", dir.Id)
 		}
 	}
+
+	// Ensure getting deleted child directory errors
+	children, err := store.GetChildren(context.Background(), child1dir.Id, nil)
+	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
+	assert.Len(t, children, 0, "no children should be returned for deleted directory")
+
+	// Ensure deleted child directories are visible when WithDeleted is true
+	opts := &storage.ListOptions{
+		WithDeleted: true,
+	}
+
+	children, err = store.GetChildren(context.Background(), child1dir.Id, opts)
+	assert.NoError(t, err, "no error should have returned when WithDeleted is true")
+
+	assert.Len(t, children, 1, "children should have been returned when WithDeleted is true")
+	assert.Equal(t, child2dir.Id, children[0], "id should match deleted directory")
+
+	// Ensure getting deleted parent directory errors
+	parents, err := store.GetParents(context.Background(), child2dir.Id, nil)
+	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
+	assert.Len(t, parents, 0, "no parents should be returned for deleted directory")
+
+	// Ensure deleted parent directories are visible when WithDeleted is true
+	parents, err = store.GetParents(context.Background(), child2dir.Id, opts)
+	assert.NoError(t, err, "no error should have returned when WithDeleted is true")
+
+	assert.Len(t, parents, 2, "both parents should have been returned when WithDeleted is true")
+	assert.Contains(t, parents, child1dir.Id, "parent id not found in list of parents")
 }
 
 func TestDeleteDirectoryAlreadyDeleted(t *testing.T) {
@@ -289,7 +333,7 @@ func TestQueryUnknownDirectory(t *testing.T) {
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryDriver(db)
 
-	d, err := store.GetDirectory(context.Background(), v1.DirectoryID(uuid.New()))
+	d, err := store.GetDirectory(context.Background(), v1.DirectoryID(uuid.New()), nil)
 	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
 	assert.Nil(t, d, "should be nil")
 }
@@ -310,7 +354,7 @@ func TestGetSingleParent(t *testing.T) {
 	rd, err := store.CreateDirectory(context.Background(), d)
 	assert.NoError(t, err, "error creating directory")
 
-	parents, gperr := store.GetParents(context.Background(), rd.Id)
+	parents, gperr := store.GetParents(context.Background(), rd.Id, nil)
 	assert.NoError(t, gperr, "error getting parents")
 	assert.Len(t, parents, 1, "should have 1 parent")
 
@@ -354,7 +398,7 @@ func TestGetMultipleParents(t *testing.T) {
 	rd4, err := store.CreateDirectory(context.Background(), d4)
 	assert.NoError(t, err, "error creating directory")
 
-	parents, gperr := store.GetParents(context.Background(), rd3.Id)
+	parents, gperr := store.GetParents(context.Background(), rd3.Id, nil)
 	assert.NoError(t, gperr, "error getting parents")
 	assert.Len(t, parents, 3, "should have 3 parents")
 
@@ -362,7 +406,7 @@ func TestGetMultipleParents(t *testing.T) {
 	assert.Equal(t, d1.Id, parents[1], "id should match")
 	assert.Equal(t, rootdir.Id, parents[2], "id should match")
 
-	parents, gperr = store.GetParentsUntilAncestor(context.Background(), rd4.Id, rd1.Id)
+	parents, gperr = store.GetParentsUntilAncestor(context.Background(), rd4.Id, rd1.Id, nil)
 	assert.NoError(t, gperr, "error getting parents")
 	assert.Len(t, parents, 3, "should have 3 parents")
 
@@ -379,7 +423,7 @@ func TestGetParentFromRootDirShouldReturnEmpty(t *testing.T) {
 
 	rootdir := withRootDir(t, store)
 
-	parents, gperr := store.GetParents(context.Background(), rootdir.Id)
+	parents, gperr := store.GetParents(context.Background(), rootdir.Id, nil)
 	assert.NoError(t, gperr, "error getting parents")
 	assert.Len(t, parents, 0, "should have 0 parents")
 }
@@ -410,7 +454,7 @@ func TestGetParentsOfDeletedDirectory(t *testing.T) {
 	_, err = store.DeleteDirectory(context.Background(), rd2.Id)
 	assert.NoError(t, err, "deleting child directory")
 
-	parents, gperr := store.GetParents(context.Background(), rd2.Id)
+	parents, gperr := store.GetParents(context.Background(), rd2.Id, nil)
 	assert.ErrorIs(t, gperr, storage.ErrDirectoryNotFound, "expect directory not found")
 	assert.Len(t, parents, 0, "should have 0 parents")
 }
@@ -421,7 +465,7 @@ func TestGetParentsFromUnknownShouldFail(t *testing.T) {
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryDriver(db)
 
-	parents, err := store.GetParents(context.Background(), v1.DirectoryID(uuid.New()))
+	parents, err := store.GetParents(context.Background(), v1.DirectoryID(uuid.New()), nil)
 	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
 	assert.Nil(t, parents, "should be nil")
 }
@@ -442,7 +486,7 @@ func TestGetChildrenBasic(t *testing.T) {
 	rd, err := store.CreateDirectory(context.Background(), d)
 	assert.NoError(t, err, "error creating directory")
 
-	children, gperr := store.GetChildren(context.Background(), rootdir.Id)
+	children, gperr := store.GetChildren(context.Background(), rootdir.Id, nil)
 	assert.NoError(t, gperr, "error getting children")
 	assert.Len(t, children, 1, "should have 1 child")
 
@@ -489,7 +533,7 @@ func TestGetChildrenMultiple(t *testing.T) {
 	rd4, err := store.CreateDirectory(context.Background(), d4)
 	assert.NoError(t, err, "error creating directory")
 
-	children, gperr := store.GetChildren(context.Background(), rootdir.Id)
+	children, gperr := store.GetChildren(context.Background(), rootdir.Id, nil)
 	assert.NoError(t, gperr, "error getting children")
 
 	assert.Len(t, children, 4, "should have 4 children")
@@ -508,7 +552,7 @@ func TestGetChildrenMayReturnEmptyAppropriately(t *testing.T) {
 
 	rootdir := withRootDir(t, store)
 
-	children, err := store.GetChildren(context.Background(), rootdir.Id)
+	children, err := store.GetChildren(context.Background(), rootdir.Id, nil)
 	assert.NoError(t, err, "should have errored")
 	assert.Len(t, children, 0, "should have 0 children")
 }
@@ -521,7 +565,7 @@ func TestGetParentsUntilAncestorIsEmptyIfChildIsAncestor(t *testing.T) {
 
 	rootdir := withRootDir(t, store)
 
-	ancestors, err := store.GetParentsUntilAncestor(context.Background(), rootdir.Id, rootdir.Id)
+	ancestors, err := store.GetParentsUntilAncestor(context.Background(), rootdir.Id, rootdir.Id, nil)
 	assert.NoError(t, err, "should not have errored")
 	assert.Len(t, ancestors, 0, "should have 0 children")
 }
@@ -534,7 +578,7 @@ func TestGetParentsUntilAncestorParentNotFound(t *testing.T) {
 
 	rootdir := withRootDir(t, store)
 
-	ancestors, err := store.GetParentsUntilAncestor(context.Background(), v1.DirectoryID(uuid.New()), rootdir.Id)
+	ancestors, err := store.GetParentsUntilAncestor(context.Background(), v1.DirectoryID(uuid.New()), rootdir.Id, nil)
 	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
 	assert.Nil(t, ancestors, "should be nil")
 }
@@ -545,7 +589,7 @@ func TestGetChildrenFromUnknownReturnsNotFound(t *testing.T) {
 	db := utils.GetNewTestDB(t, baseDBURL)
 	store := driver.NewDirectoryDriver(db)
 
-	children, err := store.GetChildren(context.Background(), v1.DirectoryID(uuid.New()))
+	children, err := store.GetChildren(context.Background(), v1.DirectoryID(uuid.New()), nil)
 	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
 	assert.Nil(t, children, "should be nil")
 }
@@ -568,7 +612,7 @@ func TestOperationsFailWithBadDatabaseConnection(t *testing.T) {
 	assert.Error(t, err, "should have errored")
 
 	// get root fails
-	_, err = store.ListRoots(context.Background())
+	_, err = store.ListRoots(context.Background(), nil)
 	assert.Error(t, err, "should have errored")
 
 	// Create directory fails
@@ -581,19 +625,19 @@ func TestOperationsFailWithBadDatabaseConnection(t *testing.T) {
 	assert.Error(t, err, "should have errored")
 
 	// Get directory fails
-	_, err = store.GetDirectory(context.Background(), someID)
+	_, err = store.GetDirectory(context.Background(), someID, nil)
 	assert.Error(t, err, "should have errored")
 
 	// Get parents fails
-	_, err = store.GetParents(context.Background(), someID)
+	_, err = store.GetParents(context.Background(), someID, nil)
 	assert.Error(t, err, "should have errored")
 
 	// Get children fails
-	_, err = store.GetChildren(context.Background(), someID)
+	_, err = store.GetChildren(context.Background(), someID, nil)
 	assert.Error(t, err, "should have errored")
 
 	// Get parents until ancestor fails
 	otherID := v1.DirectoryID(uuid.New())
-	_, err = store.GetParentsUntilAncestor(context.Background(), someID, otherID)
+	_, err = store.GetParentsUntilAncestor(context.Background(), someID, otherID, nil)
 	assert.Error(t, err, "should have errored")
 }

@@ -9,17 +9,17 @@ import (
 // Reader is the interface that allows doing basic read operations
 // on the directory tree.
 type Reader interface {
-	GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.Directory, error)
-	GetParents(ctx context.Context, id v1.DirectoryID) ([]v1.DirectoryID, error)
-	GetParentsUntilAncestor(ctx context.Context, child, ancestor v1.DirectoryID) ([]v1.DirectoryID, error)
-	GetChildren(ctx context.Context, id v1.DirectoryID) ([]v1.DirectoryID, error)
+	GetDirectory(ctx context.Context, id v1.DirectoryID, opts *GetOptions) (*v1.Directory, error)
+	GetParents(ctx context.Context, id v1.DirectoryID, opts *ListOptions) ([]v1.DirectoryID, error)
+	GetParentsUntilAncestor(ctx context.Context, child, ancestor v1.DirectoryID, opts *ListOptions) ([]v1.DirectoryID, error)
+	GetChildren(ctx context.Context, id v1.DirectoryID, opts *ListOptions) ([]v1.DirectoryID, error)
 }
 
 // RootReader is the interface that allows doing all read operations
 // on the directory tree.
 type RootReader interface {
 	Reader
-	ListRoots(ctx context.Context) ([]v1.DirectoryID, error)
+	ListRoots(ctx context.Context, opts *ListOptions) ([]v1.DirectoryID, error)
 }
 
 // Writer is the interface that allows doing basic write operations.

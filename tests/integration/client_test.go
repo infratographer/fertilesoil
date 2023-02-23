@@ -34,7 +34,7 @@ func TestListNoRoots(t *testing.T) {
 
 	testutils.WaitForServer(t, cli)
 
-	rl, err := cli.ListRoots(context.Background())
+	rl, err := cli.ListRoots(context.Background(), nil)
 	assert.NoError(t, err, "error getting roots")
 	assert.Equal(t, 0, len(rl.Directories), "unexpected number of directories")
 }
@@ -66,12 +66,12 @@ func TestListOneRoot(t *testing.T) {
 	assert.Nil(t, rd.Directory.Parent, "unexpected parent")
 
 	// Ensure root is returned in list
-	rl, err := cli.ListRoots(context.Background())
+	rl, err := cli.ListRoots(context.Background(), nil)
 	assert.NoError(t, err, "error getting roots")
 	assert.Equal(t, 1, len(rl.Directories), "unexpected number of directories")
 
 	// Ensure GetParents call returns empty list
-	parents, err := cli.GetParents(context.Background(), rd.Directory.Id)
+	parents, err := cli.GetParents(context.Background(), rd.Directory.Id, nil)
 	assert.NoError(t, err, "error getting parents")
 	assert.Equal(t, 0, len(parents.Directories), "unexpected number of parents")
 }
@@ -102,7 +102,7 @@ func TestListMultipleRoots(t *testing.T) {
 	}
 
 	// Ensure ListRoots returns all roots
-	rl, err := cli.ListRoots(context.Background())
+	rl, err := cli.ListRoots(context.Background(), nil)
 	assert.NoError(t, err, "error getting roots")
 	assert.Equal(t, nroots, len(rl.Directories), "unexpected number of directories")
 }
@@ -142,14 +142,14 @@ func TestOneDirectory(t *testing.T) {
 	assert.NotNil(t, dir.Directory.Parent, "expected parent")
 	assert.Equal(t, rd.Directory.Id, *dir.Directory.Parent, "unexpected parent")
 
-	retd, err := cli.GetDirectory(context.Background(), dir.Directory.Id)
+	retd, err := cli.GetDirectory(context.Background(), dir.Directory.Id, nil)
 	assert.NoError(t, err, "error getting directory")
 	assert.Equal(t, "dir", retd.Directory.Name, "unexpected directory name")
 	// Ensure parent info is set
 	assert.NotNil(t, dir.Directory.Parent, "expected parent")
 	assert.Equal(t, rd.Directory.Id, *retd.Directory.Parent, "unexpected parent")
 
-	parents, err := cli.GetParents(context.Background(), dir.Directory.Id)
+	parents, err := cli.GetParents(context.Background(), dir.Directory.Id, nil)
 	assert.NoError(t, err, "error getting parents")
 	assert.Equal(t, 1, len(parents.Directories), "unexpected number of parents")
 	assert.Equal(t, rd.Directory.Id, parents.Directories[0], "unexpected parent name")
@@ -231,14 +231,14 @@ func TestFullTree(t *testing.T) {
 
 	assert.NoError(t, err, "error creating directory")
 
-	dir5parents, err := cli.GetParents(context.Background(), dir5.Directory.Id)
+	dir5parents, err := cli.GetParents(context.Background(), dir5.Directory.Id, nil)
 	assert.NoError(t, err, "error getting parents")
 	assert.Equal(t, 3, len(dir5parents.Directories), "unexpected number of parents")
 	assert.Equal(t, dir3.Directory.Id, dir5parents.Directories[0], "unexpected parent name")
 	assert.Equal(t, dir2.Directory.Id, dir5parents.Directories[1], "unexpected parent name")
 	assert.Equal(t, rd.Directory.Id, dir5parents.Directories[2], "unexpected parent name")
 
-	dir4parents, err := cli.GetParents(context.Background(), dir4.Directory.Id)
+	dir4parents, err := cli.GetParents(context.Background(), dir4.Directory.Id, nil)
 	assert.NoError(t, err, "error getting parents")
 	// same number of parents as dir5
 	assert.Equal(t, 3, len(dir4parents.Directories), "unexpected number of parents")
@@ -246,14 +246,14 @@ func TestFullTree(t *testing.T) {
 	assert.Equal(t, dir2.Directory.Id, dir5parents.Directories[1], "unexpected parent name")
 	assert.Equal(t, rd.Directory.Id, dir5parents.Directories[2], "unexpected parent name")
 
-	dir2children, err := cli.GetChildren(context.Background(), dir2.Directory.Id)
+	dir2children, err := cli.GetChildren(context.Background(), dir2.Directory.Id, nil)
 	assert.NoError(t, err, "error getting children")
 	assert.Equal(t, 3, len(dir2children.Directories), "unexpected number of children")
 	assert.Contains(t, dir2children.Directories, dir3.Directory.Id, "dir2 did not contain dir3 as child")
 	assert.Contains(t, dir2children.Directories, dir4.Directory.Id, "dir2 did not contain dir4 as child")
 	assert.Contains(t, dir2children.Directories, dir5.Directory.Id, "dir2 did not contain dir5 as child")
 
-	parentsUntil, err := cli.GetParentsUntil(context.Background(), dir5.Directory.Id, dir2.Directory.Id)
+	parentsUntil, err := cli.GetParentsUntil(context.Background(), dir5.Directory.Id, dir2.Directory.Id, nil)
 	assert.NoError(t, err, "error getting parents")
 	assert.Equal(t, 2, len(parentsUntil.Directories), "unexpected number of parents")
 	assert.Equal(t, dir3.Directory.Id, parentsUntil.Directories[0], "unexpected parent name")
@@ -321,7 +321,7 @@ func TestServerWithBadDB(t *testing.T) {
 	})
 	assert.Error(t, err, "expected error creating root")
 
-	_, err = cli.ListRoots(context.Background())
+	_, err = cli.ListRoots(context.Background(), nil)
 	assert.Error(t, err, "expected error getting roots")
 
 	_, err = cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
@@ -330,17 +330,17 @@ func TestServerWithBadDB(t *testing.T) {
 	}, apiv1.DirectoryID(uuid.New()))
 	assert.Error(t, err, "expected error creating directory")
 
-	_, err = cli.GetDirectory(context.Background(), apiv1.DirectoryID(uuid.New()))
+	_, err = cli.GetDirectory(context.Background(), apiv1.DirectoryID(uuid.New()), nil)
 	assert.Error(t, err, "expected error getting directory")
 
-	_, err = cli.GetChildren(context.Background(), apiv1.DirectoryID(uuid.New()))
+	_, err = cli.GetChildren(context.Background(), apiv1.DirectoryID(uuid.New()), nil)
 	assert.Error(t, err, "expected error getting children")
 
-	_, err = cli.GetParents(context.Background(), apiv1.DirectoryID(uuid.New()))
+	_, err = cli.GetParents(context.Background(), apiv1.DirectoryID(uuid.New()), nil)
 	assert.Error(t, err, "expected error getting parents")
 
 	_, err = cli.GetParentsUntil(context.Background(),
-		apiv1.DirectoryID(uuid.New()), apiv1.DirectoryID(uuid.New()))
+		apiv1.DirectoryID(uuid.New()), apiv1.DirectoryID(uuid.New()), nil)
 	assert.Error(t, err, "expected error getting parents until")
 }
 

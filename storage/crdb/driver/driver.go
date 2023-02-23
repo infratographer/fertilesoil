@@ -14,6 +14,8 @@ const (
 	followerReadsQuery = "AS OF SYSTEM TIME follower_read_timestamp()"
 )
 
+var _ storage.DirectoryAdmin = (*Driver)(nil)
+
 type Driver struct {
 	db        *sql.DB
 	readOnly  bool
@@ -60,10 +62,16 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 	return d, nil
 }
 
-func (t *Driver) ListRoots(ctx context.Context) ([]v1.DirectoryID, error) {
+func (t *Driver) ListRoots(ctx context.Context, opts *storage.ListOptions) ([]v1.DirectoryID, error) {
 	var roots []v1.DirectoryID
 
-	q := t.formatQuery("SELECT id FROM directories %[1]s WHERE parent_id IS NULL AND deleted_at IS NULL")
+	withDeleted := "false"
+
+	if opts.IsWithDeleted() {
+		withDeleted = "true"
+	}
+
+	q := t.formatQuery("SELECT id FROM directories %[1]s WHERE parent_id IS NULL AND (" + withDeleted + " OR deleted_at IS NULL)")
 
 	rows, err := t.db.QueryContext(ctx, q)
 	if err != nil {
@@ -153,11 +161,17 @@ func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) ([]*v1.
 
 // GetDirectoryByID returns a directory by its ID.
 // Note that this call does not give out parent information.
-func (t *Driver) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.Directory, error) {
+func (t *Driver) GetDirectory(ctx context.Context, id v1.DirectoryID, opts *storage.GetOptions) (*v1.Directory, error) {
 	var d v1.Directory
 
+	withDeleted := "false"
+
+	if opts.IsWithDeleted() {
+		withDeleted = "true"
+	}
+
 	q := t.formatQuery(`SELECT id, name, metadata, created_at, updated_at, deleted_at, parent_id FROM directories %[1]s
-WHERE id = $1 AND deleted_at IS NULL`)
+WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)`)
 
 	err := t.db.QueryRowContext(ctx, q,
 		id).Scan(&d.Id, &d.Name, &d.Metadata, &d.CreatedAt, &d.UpdatedAt, &d.DeletedAt, &d.Parent)
@@ -171,19 +185,25 @@ WHERE id = $1 AND deleted_at IS NULL`)
 	return &d, nil
 }
 
-func (t *Driver) GetParents(ctx context.Context, child v1.DirectoryID) ([]v1.DirectoryID, error) {
+func (t *Driver) GetParents(ctx context.Context, child v1.DirectoryID, opts *storage.ListOptions) ([]v1.DirectoryID, error) {
 	var parents []v1.DirectoryID
+
+	withDeleted := "false"
+
+	if opts.IsWithDeleted() {
+		withDeleted = "true"
+	}
 
 	// TODO(jaosorior): What's more efficient? A single recursive query or multiple queries?
 	//                  Should we instead recurse in-code and do multiple queries?
 	q := t.formatQuery(`WITH RECURSIVE get_parents AS (
-	SELECT id, parent_id FROM directories WHERE id = $1 AND deleted_at IS NULL
+	SELECT id, parent_id FROM directories WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)
 
 	UNION
 
 	SELECT d.id, d.parent_id FROM directories d
 	INNER JOIN get_parents gp ON d.id = gp.parent_id
-	WHERE d.deleted_at IS NULL
+	WHERE (` + withDeleted + ` OR d.deleted_at IS NULL)
 )
 SELECT id FROM get_parents %[1]s`)
 
@@ -213,11 +233,18 @@ SELECT id FROM get_parents %[1]s`)
 func (t *Driver) GetParentsUntilAncestor(
 	ctx context.Context,
 	child, ancestor v1.DirectoryID,
+	opts *storage.ListOptions,
 ) ([]v1.DirectoryID, error) {
 	// optimization: we don't need to go through the database
 	// if the child is the ancestor
 	if child == ancestor {
 		return []v1.DirectoryID{}, nil
+	}
+
+	withDeleted := "false"
+
+	if opts.IsWithDeleted() {
+		withDeleted = "true"
 	}
 
 	var parents []v1.DirectoryID
@@ -226,13 +253,13 @@ func (t *Driver) GetParentsUntilAncestor(
 	//                  Should we instead recurse in-code and do multiple queries?
 	q := t.formatQuery(`WITH RECURSIVE get_parents AS (
 	SELECT id, parent_id FROM directories
-	WHERE id = $1 AND deleted_at IS NULL
+	WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)
 
 	UNION
 
 	SELECT d.id, d.parent_id FROM directories d
 	INNER JOIN get_parents gp ON d.id = gp.parent_id
-	WHERE gp.id != $2 AND d.deleted_at IS NULL
+	WHERE gp.id != $2 AND (` + withDeleted + ` OR d.deleted_at IS NULL)
 ) SELECT id FROM get_parents %[1]s`)
 
 	rows, err := t.db.QueryContext(ctx, q, child, ancestor)
@@ -259,18 +286,24 @@ func (t *Driver) GetParentsUntilAncestor(
 	return parents[1:], nil
 }
 
-func (t *Driver) GetChildren(ctx context.Context, parent v1.DirectoryID) ([]v1.DirectoryID, error) {
+func (t *Driver) GetChildren(ctx context.Context, parent v1.DirectoryID, opts *storage.ListOptions) ([]v1.DirectoryID, error) {
 	var children []v1.DirectoryID
+
+	withDeleted := "false"
+
+	if opts.IsWithDeleted() {
+		withDeleted = "true"
+	}
 
 	q := t.formatQuery(`WITH RECURSIVE get_children AS (
 	SELECT id, parent_id FROM directories
-	WHERE id = $1 AND deleted_at IS NULL
+	WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)
 
 	UNION
 
 	SELECT d.id, d.parent_id FROM directories d
 	INNER JOIN get_children gc ON d.parent_id = gc.id
-	WHERE d.deleted_at IS NULL
+	WHERE (` + withDeleted + ` OR d.deleted_at IS NULL)
 )
 SELECT id FROM get_children %[1]s`)
 
