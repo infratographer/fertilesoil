@@ -109,24 +109,24 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) ([]*v1.Directory, error) {
 	var affected []*v1.Directory
 
-	q := t.formatQuery(`WITH RECURSIVE get_children AS (
-		SELECT id, parent_id FROM directories
-		WHERE id = $1 AND deleted_at IS NULL AND parent_id IS NOT NULL
+	rows, err := t.db.QueryContext(ctx, `
+		WITH RECURSIVE get_children AS (
+			SELECT id, parent_id FROM directories
+			WHERE id = $1 AND deleted_at IS NULL AND parent_id IS NOT NULL
 
-		UNION
+			UNION
 
-		SELECT d.id, d.parent_id FROM directories d
-		INNER JOIN get_children gc ON d.parent_id = gc.id
-		WHERE d.deleted_at IS NULL
-	)
-	UPDATE directories
-	SET deleted_at = NOW()
-	WHERE
-		deleted_at IS NULL
-		AND id IN (SELECT id FROM get_children)
-	RETURNING id, name, metadata, created_at, updated_at, deleted_at, parent_id %[1]s`)
-
-	rows, err := t.db.QueryContext(ctx, q, id)
+			SELECT d.id, d.parent_id FROM directories d
+			INNER JOIN get_children gc ON d.parent_id = gc.id
+			WHERE d.deleted_at IS NULL
+		)
+		UPDATE directories
+		SET deleted_at = NOW()
+		WHERE
+			deleted_at IS NULL
+			AND id IN (SELECT id FROM get_children)
+		RETURNING id, name, metadata, created_at, updated_at, deleted_at, parent_id
+	`, id)
 	if err != nil {
 		return nil, fmt.Errorf("error querying directory: %w", err)
 	}
