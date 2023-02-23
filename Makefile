@@ -13,7 +13,7 @@ TREEMAN_CONTAINER_IMAGE_NAME = $(CONTAINER_REPO)/treeman
 CONTAINER_TAG?=latest
 
 # OpenAPI settings
-OAPI_CODEGEN_CMD?=go run github.com/deepmap/oapi-codegen/cmd/oapi-codegen
+OAPI_CODEGEN_CMD_VERSION?=v1.12.4
 
 # Dev infra OAuth2 settings
 DEV_OAUTH2_ADDR=localhost:8082
@@ -86,16 +86,16 @@ generate: openapi  ## Generates OpenAPI types and specs.
 openapi: openapi-types openapi-spec  ## Generates OpenAPI types and specs.
 
 .PHONY: openapi-types
-openapi-types:  ## Generates OpenAPI types.
+openapi-types:  | oapi-codegen-cmd  ## Generates OpenAPI types.
 	@echo Generating OpenAPI types...
-	@$(OAPI_CODEGEN_CMD) -package v1 \
+	@oapi-codegen -package v1 \
 		-generate types \
 		-o api/v1/types.gen.go treeman-openapi-v1.yaml
 
 .PHONY: openapi-spec
-openapi-spec:  ## Generates OpenAPI specs.
+openapi-spec:  | oapi-codegen-cmd  ## Generates OpenAPI specs.
 	@echo Generating OpenAPI spec...
-	@$(OAPI_CODEGEN_CMD) -package v1 \
+	@oapi-codegen -package v1 \
 		-generate spec \
 		-o api/v1/openapi.gen.go treeman-openapi-v1.yaml
 
@@ -199,4 +199,11 @@ nk-tool:
 	@which nk &>/dev/null || \
 		echo Installing "nk" tool && \
 		go install github.com/nats-io/nkeys/nk@latest && \
+		export PATH=$$PATH:$(shell go env GOPATH)
+
+.PHONY: oapi-codegen-cmd
+oapi-codegen-cmd:
+	@which oapi-codegen &>/dev/null || \
+		echo Installing "oapi-codegen" command && \
+		go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@$(OAPI_CODEGEN_CMD_VERSION) && \
 		export PATH=$$PATH:$(shell go env GOPATH)
