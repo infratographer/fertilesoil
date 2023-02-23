@@ -24,7 +24,7 @@ jobs:
     uses: metal-toolbox/container-push/.github/workflows/container-push.yml@main
     with:
       name: treeman
-      tag: ${GITHUB_REF_NAME}
+      tag: ${{ github.ref_name }}
       registry_org: ${{ github.repository }}
       dockerfile_path: images/treeman/Dockerfile
       platforms: linux/amd64,linux/arm64
