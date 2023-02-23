@@ -166,7 +166,11 @@ func (c *httpClient) DeleteDirectory(ctx context.Context, id v1.DirectoryID) (*v
 	return &dirList, nil
 }
 
-func (c *httpClient) GetDirectory(ctx context.Context, id v1.DirectoryID, opts *storage.GetOptions) (*v1.DirectoryFetch, error) {
+func (c *httpClient) GetDirectory(
+	ctx context.Context,
+	id v1.DirectoryID,
+	opts *storage.GetOptions,
+) (*v1.DirectoryFetch, error) {
 	path, err := url.JoinPath("/api/v1/directories", id.String())
 	if err != nil {
 		return nil, fmt.Errorf("error getting directory: %w", err)
@@ -196,7 +200,11 @@ func (c *httpClient) GetDirectory(ctx context.Context, id v1.DirectoryID, opts *
 	return &dir, nil
 }
 
-func (c *httpClient) GetParents(ctx context.Context, id v1.DirectoryID, opts *storage.ListOptions) (*v1.DirectoryList, error) {
+func (c *httpClient) GetParents(
+	ctx context.Context,
+	id v1.DirectoryID,
+	opts *storage.ListOptions,
+) (*v1.DirectoryList, error) {
 	return c.doGetParents(ctx, id, nil, opts)
 }
 
@@ -251,7 +259,11 @@ func (c *httpClient) doGetParents(
 	return &dirList, nil
 }
 
-func (c *httpClient) GetChildren(ctx context.Context, id v1.DirectoryID, opts *storage.ListOptions) (*v1.DirectoryList, error) {
+func (c *httpClient) GetChildren(
+	ctx context.Context,
+	id v1.DirectoryID,
+	opts *storage.ListOptions,
+) (*v1.DirectoryList, error) {
 	path, err := url.JoinPath("/api/v1/directories", id.String(), "children")
 	if err != nil {
 		return nil, fmt.Errorf("error getting children: %w", err)
@@ -321,7 +333,7 @@ func (c *httpClient) encode(r any) (io.Reader, error) {
 	return &buf, nil
 }
 
-// addGetOptionsToURL adds defined options to the provided url string
+// addGetOptionsToURL adds defined options to the provided url string.
 func addGetOptionsToURL(urlstr string, opts *storage.GetOptions) (string, error) {
 	u, err := url.Parse(urlstr)
 	if err != nil {
@@ -339,7 +351,7 @@ func addGetOptionsToURL(urlstr string, opts *storage.GetOptions) (string, error)
 	return u.String(), nil
 }
 
-// addListOptionsToURL adds defined options to the provided url string
+// addListOptionsToURL adds defined options to the provided url string.
 func addListOptionsToURL(urlstr string, opts *storage.ListOptions) (string, error) {
 	u, err := url.Parse(urlstr)
 	if err != nil {

@@ -262,6 +262,7 @@ func deleteDirectory(s *common.Server) gin.HandlerFunc {
 	}
 }
 
+//nolint:dupl // listChildren and listParents are very similar, but not the same.
 func listChildren(s *common.Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		opts, err := listOptionsFromGetQuery(c)
@@ -297,6 +298,7 @@ func listChildren(s *common.Server) gin.HandlerFunc {
 	}
 }
 
+//nolint:dupl // listChildren and listParents are very similar, but not the same.
 func listParents(s *common.Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		opts, err := listOptionsFromGetQuery(c)
@@ -374,7 +376,11 @@ func listParentsUntil(s *common.Server) gin.HandlerFunc {
 	}
 }
 
-func getDirectoryFromReference(drv storage.DirectoryAdmin, idstr string, opts *storage.GetOptions) (*v1.Directory, error) {
+func getDirectoryFromReference(
+	drv storage.DirectoryAdmin,
+	idstr string,
+	opts *storage.GetOptions,
+) (*v1.Directory, error) {
 	id, err := v1.ParseDirectoryID(idstr)
 	if err != nil {
 		return nil, err

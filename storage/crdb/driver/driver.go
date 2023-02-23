@@ -65,13 +65,16 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 func (t *Driver) ListRoots(ctx context.Context, opts *storage.ListOptions) ([]v1.DirectoryID, error) {
 	var roots []v1.DirectoryID
 
-	withDeleted := "false"
+	withDeleted := "false" //nolint:goconst // unnecessary to make a constant
 
 	if opts.IsWithDeleted() {
-		withDeleted = "true"
+		withDeleted = "true" //nolint:goconst // unnecessary to make a constant
 	}
 
-	q := t.formatQuery("SELECT id FROM directories %[1]s WHERE parent_id IS NULL AND (" + withDeleted + " OR deleted_at IS NULL)")
+	q := t.formatQuery(`
+		SELECT id FROM directories %[1]s
+		WHERE parent_id IS NULL AND (` + withDeleted + ` OR deleted_at IS NULL)
+	`)
 
 	rows, err := t.db.QueryContext(ctx, q)
 	if err != nil {
@@ -185,7 +188,12 @@ WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)`)
 	return &d, nil
 }
 
-func (t *Driver) GetParents(ctx context.Context, child v1.DirectoryID, opts *storage.ListOptions) ([]v1.DirectoryID, error) {
+//nolint:dupl // GetParents and GetChildren are very similar but are not the same
+func (t *Driver) GetParents(
+	ctx context.Context,
+	child v1.DirectoryID,
+	opts *storage.ListOptions,
+) ([]v1.DirectoryID, error) {
 	var parents []v1.DirectoryID
 
 	withDeleted := "false"
@@ -286,7 +294,12 @@ func (t *Driver) GetParentsUntilAncestor(
 	return parents[1:], nil
 }
 
-func (t *Driver) GetChildren(ctx context.Context, parent v1.DirectoryID, opts *storage.ListOptions) ([]v1.DirectoryID, error) {
+//nolint:dupl // GetParents and GetChildren are very similar but are not the same
+func (t *Driver) GetChildren(
+	ctx context.Context,
+	parent v1.DirectoryID,
+	opts *storage.ListOptions,
+) ([]v1.DirectoryID, error) {
 	var children []v1.DirectoryID
 
 	withDeleted := "false"
