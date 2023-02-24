@@ -110,7 +110,7 @@ audit:
   # -- (bool) toggles audittail
   enabled: true
   # -- (dict) Infomation about the audittail image
-  auditImage:
+  image:
     registry: ghcr.io
     repository: metal-toolbox/audittail
     tag: v0.6.1

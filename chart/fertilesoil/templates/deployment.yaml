@@ -24,7 +24,7 @@ spec:
     {{- if .Values.audit.enabled }}
       initContainers:
       # Optional: Pre-creates the `/app-audit/audit.log` named pipe.
-      - image: "{{ .Values.audit.auditImage.registry }}/{{ .Values.audit.auditImage.repository }}:{{ .Values.audit.auditImage.tag | default .Chart.AppVersion }}"
+      - image: "{{ .Values.audit.image.registry }}/{{ .Values.audit.image.repository }}:{{ .Values.audit.image.tag | default .Chart.AppVersion }}"
         {{- with .Values.securityContext }}
         securityContext:
           {{- toYaml . | nindent 10 }}
@@ -90,13 +90,13 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- if .Values.audit.enabled }} # Begin audittail toggle
-      # This is mounted in the 1st container
           volumeMounts:
-          - name: audit-logs
-            mountPath: /app-audit
           - name: nkey-file
             mountPath: /data/nkey.key
+      {{- if .Values.audit.enabled }} # Begin audittail toggle
+      # This is mounted in the 1st container
+          - name: audit-logs
+            mountPath: /app-audit
       # This is the audit container
         - name: {{ template "common.names.fullname" . }}-audit
           {{- with .Values.securityContext }}
@@ -106,7 +106,7 @@ spec:
           args:
             - -f
             - /app-audit/audit.log
-          image: "{{ .Values.audit.auditImage.registry }}/{{ .Values.audit.auditImage.repository }}:{{ .Values.audit.auditImage.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.audit.image.registry }}/{{ .Values.audit.image.repository }}:{{ .Values.audit.image.tag | default .Chart.AppVersion }}"
           volumeMounts:
           - name: audit-logs
           {{- with .Values.audit.resources }}
@@ -120,7 +120,6 @@ spec:
       - name: nkey-file
         secret:
           secretName: nkey-file
-      # TODO: Does fertilsoil need audit enabled always?
       {{- if .Values.audit.enabled }}
       - name: audit-logs
         emptyDir: {}
