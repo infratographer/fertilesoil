@@ -1,0 +1,138 @@
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ template "common.names.fullname" . }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+    {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    # TODO: Does fertilsoil need audit enabled always?
+    {{- if .Values.audit.enabled }}
+      initContainers:
+      # Optional: Pre-creates the `/app-audit/audit.log` named pipe.
+      - image: "{{ .Values.audit.image.registry }}/{{ .Values.audit.image.repository }}:{{ .Values.audit.image.tag | default .Chart.AppVersion }}"
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        args:
+          - 'init'
+          - '-f'
+          - '/app-audit/audit.log'
+        name: init-audit-logs
+        imagePullPolicy: Always
+        volumeMounts:
+          - mountPath: /app-audit
+            name: audit-logs
+      {{- with .Values.audit.init.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+      {{- end }}
+    {{- end }}
+      containers:
+        - name: {{ template "common.names.fullname" . }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          {{- with .Values.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          env:
+            - name: FERTILESOIL_CRDB_HOST
+              value: "{{ .Values.fertilsoil.env.FERTILESOIL_CRDB_HOST }}"
+            - name: FERTILESOIL_CRDB_USER
+              value: "{{ .Values.fertilsoil.env.FERTILESOIL_CRDB_USER }}"
+            - name: FERTILESOIL_CRDB_PARAMS
+              value: "{{ .Values.fertilsoil.env.FERTILESOIL_CRDB_PARAMS }}"
+            - name: FERTILESOIL_OIDC_AUDIENCE
+              value: "{{ .Values.fertilsoil.env.FERTILESOIL_OIDC_AUDIENCE }}"
+            - name: FERTILESOIL_OIDC_ISSUER
+              value: "{{ .Values.fertilsoil.env.FERTILESOIL_OIDC_ISSUER }}"
+            - name: FERTILESOIL_OIDC_JWKSURI
+              value: "{{ .Values.fertilsoil.env.FERTILESOIL_OIDC_JWKSURI }}"
+          args:
+            - "serve"
+            - "--nats-url"
+            - "{{ .Values.fertilsoil.nats.url }}"
+            - "--nats-nkey"
+            - "{{ .Values.fertilsoil.nats.nkey }}"
+            - "--auidit-log-path"
+            - "{{ .Values.fertilsoil.nats.audit_log_path }}"
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+          - name: nkey-file
+            mountPath: /data/nkey.key
+      {{- if .Values.audit.enabled }} # Begin audittail toggle
+      # This is mounted in the 1st container
+          - name: audit-logs
+            mountPath: /app-audit
+      # This is the audit container
+        - name: {{ template "common.names.fullname" . }}-audit
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          args:
+            - -f
+            - /app-audit/audit.log
+          image: "{{ .Values.audit.image.registry }}/{{ .Values.audit.image.repository }}:{{ .Values.audit.image.tag | default .Chart.AppVersion }}"
+          volumeMounts:
+          - name: audit-logs
+          {{- with .Values.audit.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- end }}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: nkey-file
+        secret:
+          secretName: nkey-file
+      {{- if .Values.audit.enabled }}
+      - name: audit-logs
+        emptyDir: {}
+      {{- end }} # End audittail toggle
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
