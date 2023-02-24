@@ -14,13 +14,6 @@ type CreateDirectoryRequest struct {
 	Version  string             `json:"version"`
 }
 
-// UpdateDirectoryRequest defines model for UpdateDirectoryRequest.
-type UpdateDirectoryRequest struct {
-	Metadata *DirectoryMetadata `json:"metadata,omitempty"`
-	Name     string             `json:"name"`
-	Version  string             `json:"version"`
-}
-
 // Directory defines model for Directory.
 type Directory struct {
 	CreatedAt time.Time          `json:"createdAt"`
@@ -61,6 +54,13 @@ type NewDirectory struct {
 	Name     string             `binding:"required" json:"name"`
 }
 
+// UpdateDirectoryRequest defines model for UpdateDirectoryRequest.
+type UpdateDirectoryRequest struct {
+	Metadata *DirectoryMetadata `json:"metadata,omitempty"`
+	Name     *string            `json:"name,omitempty"`
+	Version  string             `json:"version"`
+}
+
 // WithDeleted defines model for with_deleted.
 type WithDeleted = bool
 
@@ -88,6 +88,9 @@ type ListParentsUntilParams struct {
 type ListRootsParams struct {
 	WithDeleted *WithDeleted `form:"with_deleted,omitempty" json:"with_deleted,omitempty"`
 }
+
+// UpdateDirectoryJSONRequestBody defines body for UpdateDirectory for application/json ContentType.
+type UpdateDirectoryJSONRequestBody = UpdateDirectoryRequest
 
 // CreateDirectoryJSONRequestBody defines body for CreateDirectory for application/json ContentType.
 type CreateDirectoryJSONRequestBody = CreateDirectoryRequest

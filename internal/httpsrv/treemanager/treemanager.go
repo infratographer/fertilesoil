@@ -250,8 +250,8 @@ func updateDirectory(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
-		if req.Name != "" {
-			d.Name = req.Name
+		if req.Name != nil && *req.Name != "" {
+			d.Name = *req.Name
 		}
 
 		if req.Metadata != nil {
