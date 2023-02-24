@@ -89,7 +89,7 @@ func apiVersionHandler(c *gin.Context) {
 
 func listRoots(s *common.Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		opts, err := listOptionsFromGetQuery(c)
+		options, err := storageOptionsFromGetQuery(c)
 		if err != nil {
 			s.L.Error("error building storage.ListOptions from GetQuery", zap.Error(err))
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -98,7 +98,7 @@ func listRoots(s *common.Server) gin.HandlerFunc {
 			return
 		}
 
-		roots, err := s.T.ListRoots(c, opts)
+		roots, err := s.T.ListRoots(c, options...)
 		if err != nil {
 			s.L.Error("error listing roots", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -143,7 +143,7 @@ func createRootDirectory(s *common.Server) gin.HandlerFunc {
 
 func getDirectory(s *common.Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		opts, err := getOptionsFromGetQuery(c)
+		options, err := storageOptionsFromGetQuery(c)
 		if err != nil {
 			s.L.Error("error building storage.GetOptions from GetQuery", zap.Error(err))
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -154,7 +154,7 @@ func getDirectory(s *common.Server) gin.HandlerFunc {
 
 		idstr := c.Param("id")
 
-		dir, err := getDirectoryFromReference(s.T, idstr, opts)
+		dir, err := getDirectoryFromReference(s.T, idstr, options...)
 		if err != nil {
 			outputGetDirectoryError(c, err)
 			return
@@ -186,7 +186,7 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 		}
 
 		var parent *v1.Directory
-		parent, err = s.T.GetDirectory(c, id, nil)
+		parent, err = s.T.GetDirectory(c, id)
 		if errors.Is(err, storage.ErrDirectoryNotFound) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "parent directory not found",
@@ -265,7 +265,7 @@ func deleteDirectory(s *common.Server) gin.HandlerFunc {
 //nolint:dupl // listChildren and listParents are very similar, but not the same.
 func listChildren(s *common.Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		opts, err := listOptionsFromGetQuery(c)
+		options, err := storageOptionsFromGetQuery(c)
 		if err != nil {
 			s.L.Error("error building storage.ListOptions from GetQuery", zap.Error(err))
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -276,13 +276,13 @@ func listChildren(s *common.Server) gin.HandlerFunc {
 
 		idstr := c.Param("id")
 
-		dir, err := getDirectoryFromReference(s.T, idstr, opts.ToGetOptions())
+		dir, err := getDirectoryFromReference(s.T, idstr, options...)
 		if err != nil {
 			outputGetDirectoryError(c, err)
 			return
 		}
 
-		children, err := s.T.GetChildren(c, dir.Id, opts)
+		children, err := s.T.GetChildren(c, dir.Id, options...)
 		if err != nil {
 			s.L.Error("error listing children", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -301,7 +301,7 @@ func listChildren(s *common.Server) gin.HandlerFunc {
 //nolint:dupl // listChildren and listParents are very similar, but not the same.
 func listParents(s *common.Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		opts, err := listOptionsFromGetQuery(c)
+		options, err := storageOptionsFromGetQuery(c)
 		if err != nil {
 			s.L.Error("error building storage.ListOptions from GetQuery", zap.Error(err))
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -312,13 +312,13 @@ func listParents(s *common.Server) gin.HandlerFunc {
 
 		idstr := c.Param("id")
 
-		dir, err := getDirectoryFromReference(s.T, idstr, opts.ToGetOptions())
+		dir, err := getDirectoryFromReference(s.T, idstr, options...)
 		if err != nil {
 			outputGetDirectoryError(c, err)
 			return
 		}
 
-		parents, err := s.T.GetParents(c, dir.Id, opts)
+		parents, err := s.T.GetParents(c, dir.Id, options...)
 		if err != nil {
 			s.L.Error("error listing parents", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -336,7 +336,7 @@ func listParents(s *common.Server) gin.HandlerFunc {
 
 func listParentsUntil(s *common.Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		opts, err := listOptionsFromGetQuery(c)
+		options, err := storageOptionsFromGetQuery(c)
 		if err != nil {
 			s.L.Error("error building storage.ListOptions from GetQuery", zap.Error(err))
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -347,7 +347,7 @@ func listParentsUntil(s *common.Server) gin.HandlerFunc {
 
 		idstr := c.Param("id")
 
-		dir, err := getDirectoryFromReference(s.T, idstr, opts.ToGetOptions())
+		dir, err := getDirectoryFromReference(s.T, idstr, options...)
 		if err != nil {
 			outputGetDirectoryError(c, err)
 			return
@@ -355,13 +355,13 @@ func listParentsUntil(s *common.Server) gin.HandlerFunc {
 
 		untilstr := c.Param("until")
 
-		untildir, err := getDirectoryFromReference(s.T, untilstr, opts.ToGetOptions())
+		untildir, err := getDirectoryFromReference(s.T, untilstr, options...)
 		if err != nil {
 			outputGetDirectoryError(c, err)
 			return
 		}
 
-		parents, err := s.T.GetParentsUntilAncestor(c, dir.Id, untildir.Id, opts)
+		parents, err := s.T.GetParentsUntilAncestor(c, dir.Id, untildir.Id, options...)
 		if err != nil {
 			s.L.Error("error listing parents", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -379,14 +379,14 @@ func listParentsUntil(s *common.Server) gin.HandlerFunc {
 func getDirectoryFromReference(
 	drv storage.DirectoryAdmin,
 	idstr string,
-	opts *storage.GetOptions,
+	options ...storage.Option,
 ) (*v1.Directory, error) {
 	id, err := v1.ParseDirectoryID(idstr)
 	if err != nil {
 		return nil, err
 	}
 
-	dir, err := drv.GetDirectory(context.Background(), id, opts)
+	dir, err := drv.GetDirectory(context.Background(), id, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -412,32 +412,19 @@ func outputGetDirectoryError(c *gin.Context, err error) {
 	}
 }
 
-// getOptionsFromGetQuery builds a new storage.GetOptions from gin query.
-func getOptionsFromGetQuery(c *gin.Context) (*storage.GetOptions, error) {
-	opts := &storage.GetOptions{}
+// storageOptionsFromGetQuery builds a new storage.GetOptions from gin query.
+func storageOptionsFromGetQuery(c *gin.Context) ([]storage.Option, error) {
+	var options []storage.Option
 
 	if value, ok := c.GetQuery("with_deleted"); ok {
 		if withDeleted, err := strconv.ParseBool(value); err == nil {
-			opts.WithDeleted = withDeleted
+			if withDeleted {
+				options = append(options, storage.WithDeletedDirectories)
+			}
 		} else {
 			return nil, err
 		}
 	}
 
-	return opts, nil
-}
-
-// listOptionsFromGetQuery builds a new storage.ListOptions from gin query.
-func listOptionsFromGetQuery(c *gin.Context) (*storage.ListOptions, error) {
-	opts := &storage.ListOptions{}
-
-	if value, ok := c.GetQuery("with_deleted"); ok {
-		if withDeleted, err := strconv.ParseBool(value); err == nil {
-			opts.WithDeleted = withDeleted
-		} else {
-			return nil, err
-		}
-	}
-
-	return opts, nil
+	return options, nil
 }

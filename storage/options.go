@@ -1,43 +1,24 @@
 package storage
 
-// GetOptions allows for additional options to be passed to get functions.
-type GetOptions struct {
-	WithDeleted bool
+// Options contains all possible storage options.
+type Options struct {
+	WithDeletedDirectories bool
 }
 
-// IsWithDeleted returns WithDeleted.
-// If opts is nil, false is returned.
-func (opts *GetOptions) IsWithDeleted() bool {
-	if opts == nil {
-		return false
-	}
+// Option defines a storage Options handler.
+type Option func(opts *Options)
 
-	return opts.WithDeleted
+var WithDeletedDirectories Option = func(opts *Options) {
+	opts.WithDeletedDirectories = true
 }
 
-// ListOptions allows for additional options to be passed to list functions.
-type ListOptions struct {
-	WithDeleted bool
-}
+// BuildOptions applies all options to a new Options instance.
+func BuildOptions(opts []Option) *Options {
+	options := new(Options)
 
-// IsWithDeleted returns WithDeleted.
-// If opts is nil, false is returned.
-func (opts *ListOptions) IsWithDeleted() bool {
-	if opts == nil {
-		return false
+	for _, opt := range opts {
+		opt(options)
 	}
 
-	return opts.WithDeleted
-}
-
-// ToGetOptions converts ListOptions to the equivalent GetOptions.
-// Useful when a list call makes an underlying get call.
-func (opts *ListOptions) ToGetOptions() *GetOptions {
-	if opts == nil {
-		return nil
-	}
-
-	return &GetOptions{
-		WithDeleted: opts.WithDeleted,
-	}
+	return options
 }

@@ -122,33 +122,33 @@ func (n *notifierWithStorage) CreateRoot(ctx context.Context, d *apiv1.Directory
 func (n *notifierWithStorage) GetDirectory(
 	ctx context.Context,
 	id apiv1.DirectoryID,
-	opts *storage.GetOptions,
+	options ...storage.Option,
 ) (*apiv1.Directory, error) {
-	return n.DirectoryAdmin.GetDirectory(ctx, id, opts)
+	return n.DirectoryAdmin.GetDirectory(ctx, id, options...)
 }
 
 func (n *notifierWithStorage) GetParents(
 	ctx context.Context,
 	id apiv1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) ([]apiv1.DirectoryID, error) {
-	return n.DirectoryAdmin.GetParents(ctx, id, opts)
+	return n.DirectoryAdmin.GetParents(ctx, id, options...)
 }
 
 func (n *notifierWithStorage) GetParentsUntilAncestor(ctx context.Context,
 	child apiv1.DirectoryID,
 	ancestor apiv1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) ([]apiv1.DirectoryID, error) {
-	return n.DirectoryAdmin.GetParentsUntilAncestor(ctx, child, ancestor, opts)
+	return n.DirectoryAdmin.GetParentsUntilAncestor(ctx, child, ancestor, options...)
 }
 
 func (n *notifierWithStorage) GetChildren(
 	ctx context.Context,
 	id apiv1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) ([]apiv1.DirectoryID, error) {
-	return n.DirectoryAdmin.GetChildren(ctx, id, opts)
+	return n.DirectoryAdmin.GetChildren(ctx, id, options...)
 }
 
 func (n *notifierWithStorage) addWrapper(w wrapper) {

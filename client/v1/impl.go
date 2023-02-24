@@ -115,8 +115,8 @@ func (c *httpClient) CreateRoot(
 	return &dir, nil
 }
 
-func (c *httpClient) ListRoots(ctx context.Context, opts *storage.ListOptions) (*v1.DirectoryList, error) {
-	path, err := addListOptionsToURL("/api/v1/roots", opts)
+func (c *httpClient) ListRoots(ctx context.Context, options ...storage.Option) (*v1.DirectoryList, error) {
+	path, err := addStorageOptionsToURL("/api/v1/roots", options)
 	if err != nil {
 		return nil, fmt.Errorf("error adding options to url: %w", err)
 	}
@@ -169,14 +169,14 @@ func (c *httpClient) DeleteDirectory(ctx context.Context, id v1.DirectoryID) (*v
 func (c *httpClient) GetDirectory(
 	ctx context.Context,
 	id v1.DirectoryID,
-	opts *storage.GetOptions,
+	options ...storage.Option,
 ) (*v1.DirectoryFetch, error) {
 	path, err := url.JoinPath("/api/v1/directories", id.String())
 	if err != nil {
 		return nil, fmt.Errorf("error getting directory: %w", err)
 	}
 
-	path, err = addGetOptionsToURL(path, opts)
+	path, err = addStorageOptionsToURL(path, options)
 	if err != nil {
 		return nil, fmt.Errorf("error adding options to url: %w", err)
 	}
@@ -203,32 +203,32 @@ func (c *httpClient) GetDirectory(
 func (c *httpClient) GetParents(
 	ctx context.Context,
 	id v1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) (*v1.DirectoryList, error) {
-	return c.doGetParents(ctx, id, nil, opts)
+	return c.doGetParents(ctx, id, nil, options...)
 }
 
 func (c *httpClient) GetParentsUntil(
 	ctx context.Context,
 	id v1.DirectoryID,
 	until v1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) (*v1.DirectoryList, error) {
-	return c.doGetParents(ctx, id, &until, opts)
+	return c.doGetParents(ctx, id, &until, options...)
 }
 
 func (c *httpClient) doGetParents(
 	ctx context.Context,
 	id v1.DirectoryID,
 	until *v1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) (*v1.DirectoryList, error) {
 	path, err := url.JoinPath("/api/v1/directories", id.String(), "parents")
 	if err != nil {
 		return nil, fmt.Errorf("error getting parents: %w", err)
 	}
 
-	path, err = addListOptionsToURL(path, opts)
+	path, err = addStorageOptionsToURL(path, options)
 	if err != nil {
 		return nil, fmt.Errorf("error adding options to url: %w", err)
 	}
@@ -262,14 +262,14 @@ func (c *httpClient) doGetParents(
 func (c *httpClient) GetChildren(
 	ctx context.Context,
 	id v1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) (*v1.DirectoryList, error) {
 	path, err := url.JoinPath("/api/v1/directories", id.String(), "children")
 	if err != nil {
 		return nil, fmt.Errorf("error getting children: %w", err)
 	}
 
-	path, err = addListOptionsToURL(path, opts)
+	path, err = addStorageOptionsToURL(path, options)
 	if err != nil {
 		return nil, fmt.Errorf("error adding options to url: %w", err)
 	}
@@ -333,34 +333,18 @@ func (c *httpClient) encode(r any) (io.Reader, error) {
 	return &buf, nil
 }
 
-// addGetOptionsToURL adds defined options to the provided url string.
-func addGetOptionsToURL(urlstr string, opts *storage.GetOptions) (string, error) {
+// addStorageOptionsToURL adds defined options to the provided url string.
+func addStorageOptionsToURL(urlstr string, options []storage.Option) (string, error) {
 	u, err := url.Parse(urlstr)
 	if err != nil {
 		return "", err
 	}
 
-	values := u.Query()
-
-	if opts.IsWithDeleted() {
-		values.Set("with_deleted", "true")
-	}
-
-	u.RawQuery = values.Encode()
-
-	return u.String(), nil
-}
-
-// addListOptionsToURL adds defined options to the provided url string.
-func addListOptionsToURL(urlstr string, opts *storage.ListOptions) (string, error) {
-	u, err := url.Parse(urlstr)
-	if err != nil {
-		return "", err
-	}
+	opts := storage.BuildOptions(options)
 
 	values := u.Query()
 
-	if opts.IsWithDeleted() {
+	if opts.WithDeletedDirectories {
 		values.Set("with_deleted", "true")
 	}
 

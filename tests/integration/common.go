@@ -204,7 +204,7 @@ func ErroneousDirectoryTest(t *testing.T, cli clientv1.HTTPRootClient) {
 //nolint:thelper // In this case, we don't want to use t.Helper() because we want to see the line number of the caller.
 func DirectoryNotFoundTest(t *testing.T, cli clientv1.HTTPRootClient) {
 	// unknown directory
-	resp, err := cli.GetDirectory(context.Background(), apiv1.DirectoryID(uuid.New()), nil)
+	resp, err := cli.GetDirectory(context.Background(), apiv1.DirectoryID(uuid.New()))
 	assert.Error(t, err, "should have errored getting directory")
 	assert.Nil(t, resp, "directory should be nil")
 }
@@ -257,7 +257,7 @@ func DeleteDirectoryTest(t *testing.T, cli clientv1.HTTPRootClient) {
 	}
 
 	// Check that deleted directory is not fetchable
-	getResp, err := cli.GetDirectory(context.Background(), ch2.Directory.Id, nil)
+	getResp, err := cli.GetDirectory(context.Background(), ch2.Directory.Id)
 	assert.Error(t, err, "should have errored getting directory")
 	assert.Nil(t, getResp, "directory should be nil")
 
@@ -267,12 +267,12 @@ func DeleteDirectoryTest(t *testing.T, cli clientv1.HTTPRootClient) {
 	assert.Nil(t, delDelResp, "expected nil affected directories")
 
 	// Check that deleted directory is fetchable when WithDeleted is true
-	getResp, err = cli.GetDirectory(context.Background(), ch2.Directory.Id, &storage.GetOptions{WithDeleted: true})
+	getResp, err = cli.GetDirectory(context.Background(), ch2.Directory.Id, storage.WithDeletedDirectories)
 	assert.NoError(t, err, "should not have errored getting directory")
 	assert.Equal(t, ch2.Directory.Id, getResp.Directory.Id, "unexpected return directory id")
 
 	// Check that deleted directory children are fetchable when WithDeleted is true
-	listResp, err := cli.GetChildren(context.Background(), ch1.Directory.Id, &storage.ListOptions{WithDeleted: true})
+	listResp, err := cli.GetChildren(context.Background(), ch1.Directory.Id, storage.WithDeletedDirectories)
 	assert.NoError(t, err, "should not have errored getting children")
 	assert.Equal(t, 1, len(listResp.Directories), "unexpected number of children returned")
 	assert.Equal(t, ch2.Directory.Id, listResp.Directories[0], "unexpected child directory id")

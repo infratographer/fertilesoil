@@ -63,12 +63,14 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 }
 
 // ListRoots returns all root directory ids.
-func (t *Driver) ListRoots(ctx context.Context, opts *storage.ListOptions) ([]v1.DirectoryID, error) {
+func (t *Driver) ListRoots(ctx context.Context, options ...storage.Option) ([]v1.DirectoryID, error) {
 	var roots []v1.DirectoryID
+
+	opts := storage.BuildOptions(options)
 
 	withDeleted := "false" //nolint:goconst // unnecessary to make a constant
 
-	if opts.IsWithDeleted() {
+	if opts.WithDeletedDirectories {
 		withDeleted = "true" //nolint:goconst // unnecessary to make a constant
 	}
 
@@ -168,12 +170,18 @@ func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) ([]*v1.
 
 // GetDirectoryByID returns a directory by its ID.
 // Note that this call does not give out parent information.
-func (t *Driver) GetDirectory(ctx context.Context, id v1.DirectoryID, opts *storage.GetOptions) (*v1.Directory, error) {
+func (t *Driver) GetDirectory(
+	ctx context.Context,
+	id v1.DirectoryID,
+	options ...storage.Option,
+) (*v1.Directory, error) {
 	var d v1.Directory
+
+	opts := storage.BuildOptions(options)
 
 	withDeleted := "false"
 
-	if opts.IsWithDeleted() {
+	if opts.WithDeletedDirectories {
 		withDeleted = "true"
 	}
 
@@ -198,13 +206,15 @@ WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)`)
 func (t *Driver) GetParents(
 	ctx context.Context,
 	child v1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) ([]v1.DirectoryID, error) {
 	var parents []v1.DirectoryID
 
+	opts := storage.BuildOptions(options)
+
 	withDeleted := "false"
 
-	if opts.IsWithDeleted() {
+	if opts.WithDeletedDirectories {
 		withDeleted = "true"
 	}
 
@@ -249,7 +259,7 @@ SELECT id FROM get_parents %[1]s`)
 func (t *Driver) GetParentsUntilAncestor(
 	ctx context.Context,
 	child, ancestor v1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) ([]v1.DirectoryID, error) {
 	// optimization: we don't need to go through the database
 	// if the child is the ancestor
@@ -257,9 +267,11 @@ func (t *Driver) GetParentsUntilAncestor(
 		return []v1.DirectoryID{}, nil
 	}
 
+	opts := storage.BuildOptions(options)
+
 	withDeleted := "false"
 
-	if opts.IsWithDeleted() {
+	if opts.WithDeletedDirectories {
 		withDeleted = "true"
 	}
 
@@ -308,13 +320,15 @@ func (t *Driver) GetParentsUntilAncestor(
 func (t *Driver) GetChildren(
 	ctx context.Context,
 	parent v1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) ([]v1.DirectoryID, error) {
 	var children []v1.DirectoryID
 
+	opts := storage.BuildOptions(options)
+
 	withDeleted := "false"
 
-	if opts.IsWithDeleted() {
+	if opts.WithDeletedDirectories {
 		withDeleted = "true"
 	}
 

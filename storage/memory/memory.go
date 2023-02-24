@@ -72,8 +72,10 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 }
 
 // ListRoots lists all root directories.
-func (t *Driver) ListRoots(ctx context.Context, opts *storage.ListOptions) ([]v1.DirectoryID, error) {
+func (t *Driver) ListRoots(ctx context.Context, options ...storage.Option) ([]v1.DirectoryID, error) {
 	var roots []v1.DirectoryID
+
+	opts := storage.BuildOptions(options)
 
 	var iterationErr error
 
@@ -84,7 +86,7 @@ func (t *Driver) ListRoots(ctx context.Context, opts *storage.ListOptions) ([]v1
 			return false
 		}
 
-		if (dir.DeletedAt == nil || opts.IsWithDeleted()) && dir.Parent == nil {
+		if (dir.DeletedAt == nil || opts.WithDeletedDirectories) && dir.Parent == nil {
 			roots = append(roots, dir.Id)
 		}
 
@@ -123,7 +125,7 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 
 // DeleteDirectory deletes a directory.
 func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) ([]*v1.Directory, error) {
-	dir, err := t.GetDirectory(ctx, id, nil)
+	dir, err := t.GetDirectory(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +134,7 @@ func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) ([]*v1.
 		return nil, storage.ErrDirectoryNotFound
 	}
 
-	children, err := t.GetChildren(ctx, id, nil)
+	children, err := t.GetChildren(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("error getting children: %w", err)
 	}
@@ -147,7 +149,7 @@ func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) ([]*v1.
 	affected[0] = dir
 
 	for i, childID := range children {
-		child, err := t.GetDirectory(ctx, childID, nil)
+		child, err := t.GetDirectory(ctx, childID)
 		if err != nil {
 			return nil, fmt.Errorf("error getting child: %s: %w", childID, err)
 		}
@@ -161,7 +163,11 @@ func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) ([]*v1.
 }
 
 // GetDirectory gets a directory by ID.
-func (t *Driver) GetDirectory(ctx context.Context, id v1.DirectoryID, opts *storage.GetOptions) (*v1.Directory, error) {
+func (t *Driver) GetDirectory(
+	ctx context.Context,
+	id v1.DirectoryID,
+	options ...storage.Option,
+) (*v1.Directory, error) {
 	rawdir, ok := t.dirMap.Load(id)
 	if !ok {
 		return nil, storage.ErrDirectoryNotFound
@@ -172,7 +178,9 @@ func (t *Driver) GetDirectory(ctx context.Context, id v1.DirectoryID, opts *stor
 		return nil, fmt.Errorf("directory %s is not of type *v1.Directory", id)
 	}
 
-	if dir.DeletedAt != nil && !opts.IsWithDeleted() {
+	opts := storage.BuildOptions(options)
+
+	if dir.DeletedAt != nil && !opts.WithDeletedDirectories {
 		return nil, storage.ErrDirectoryNotFound
 	}
 
@@ -183,12 +191,12 @@ func (t *Driver) GetDirectory(ctx context.Context, id v1.DirectoryID, opts *stor
 func (t *Driver) GetParents(
 	ctx context.Context,
 	id v1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) ([]v1.DirectoryID, error) {
 	var parents []v1.DirectoryID
 
 	for {
-		dir, err := t.GetDirectory(ctx, id, opts.ToGetOptions())
+		dir, err := t.GetDirectory(ctx, id, options...)
 		if err != nil {
 			return nil, err
 		}
@@ -210,18 +218,18 @@ func (t *Driver) GetParentsUntilAncestor(
 	ctx context.Context,
 	child,
 	ancestor v1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) ([]v1.DirectoryID, error) {
 	var parents []v1.DirectoryID
 
 	// verify that ancestor indeed exists
-	_, err := t.GetDirectory(ctx, ancestor, opts.ToGetOptions())
+	_, err := t.GetDirectory(ctx, ancestor, options...)
 	if err != nil {
 		return nil, err
 	}
 
 	for {
-		dir, err := t.GetDirectory(ctx, child, opts.ToGetOptions())
+		dir, err := t.GetDirectory(ctx, child, options...)
 		if err != nil {
 			return nil, err
 		}
@@ -245,9 +253,11 @@ func (t *Driver) GetParentsUntilAncestor(
 func (t *Driver) GetChildren(
 	ctx context.Context,
 	id v1.DirectoryID,
-	opts *storage.ListOptions,
+	options ...storage.Option,
 ) ([]v1.DirectoryID, error) {
 	var children []v1.DirectoryID
+
+	opts := storage.BuildOptions(options)
 
 	var iterationErr error
 
@@ -258,7 +268,7 @@ func (t *Driver) GetChildren(
 			return false
 		}
 
-		if (dir.DeletedAt == nil || opts.IsWithDeleted()) && dir.Parent != nil && *dir.Parent == id {
+		if (dir.DeletedAt == nil || opts.WithDeletedDirectories) && dir.Parent != nil && *dir.Parent == id {
 			children = append(children, dir.Id)
 		}
 
@@ -275,7 +285,7 @@ func (t *Driver) GetChildren(
 
 	// append the children's children
 	for _, child := range children {
-		c, err := t.GetChildren(ctx, child, opts)
+		c, err := t.GetChildren(ctx, child, options...)
 		if err != nil {
 			return nil, err
 		}

@@ -12,10 +12,10 @@ import (
 // ReadOnlyClient allows for instantiating a client
 // with read-only access to the API.
 type ReadOnlyClient interface {
-	GetDirectory(c context.Context, id v1.DirectoryID, opts *storage.GetOptions) (*v1.DirectoryFetch, error)
-	GetParents(c context.Context, id v1.DirectoryID, opts *storage.ListOptions) (*v1.DirectoryList, error)
-	GetParentsUntil(c context.Context, id, until v1.DirectoryID, opts *storage.ListOptions) (*v1.DirectoryList, error)
-	GetChildren(c context.Context, id v1.DirectoryID, opts *storage.ListOptions) (*v1.DirectoryList, error)
+	GetDirectory(c context.Context, id v1.DirectoryID, options ...storage.Option) (*v1.DirectoryFetch, error)
+	GetParents(c context.Context, id v1.DirectoryID, options ...storage.Option) (*v1.DirectoryList, error)
+	GetParentsUntil(c context.Context, id, until v1.DirectoryID, options ...storage.Option) (*v1.DirectoryList, error)
+	GetChildren(c context.Context, id v1.DirectoryID, options ...storage.Option) (*v1.DirectoryList, error)
 }
 
 // Client Allows for instantiating a client
@@ -31,7 +31,7 @@ type Client interface {
 type RootClient interface {
 	Client // Embed the Client interface
 	CreateRoot(c context.Context, r *v1.CreateDirectoryRequest) (*v1.DirectoryFetch, error)
-	ListRoots(c context.Context, opts *storage.ListOptions) (*v1.DirectoryList, error)
+	ListRoots(c context.Context, options ...storage.Option) (*v1.DirectoryList, error)
 }
 
 // RawHTTP allows for instantiating a client
