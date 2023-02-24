@@ -299,7 +299,11 @@ func TestDeleteDirectoryWithChildren(t *testing.T) {
 	assert.Contains(t, parents, child1dir.Id, "parent id not found in list of parents")
 
 	// Ensure deleted parent directories are visible when using WithDeletedDirectories option
-	parents, err = store.GetParentsUntilAncestor(context.Background(), child2dir.Id, rootdir.Id, storage.WithDeletedDirectories)
+	parents, err = store.GetParentsUntilAncestor(
+		context.Background(),
+		child2dir.Id, rootdir.Id,
+		storage.WithDeletedDirectories,
+	)
 	assert.NoError(t, err, "no error should have returned when using WithDeletedDirectories option")
 
 	assert.Len(t, parents, 2, "both parents should have been returned when using WithDeletedDirectories option")
