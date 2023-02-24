@@ -41,6 +41,11 @@ func TestListRootOneRoot(t *testing.T) {
 	assert.NoError(t, err, "should not have errored")
 	assert.Len(t, r, 1, "should have 1 root")
 	assert.Contains(t, r, rd.Id, "should contain root")
+
+	r, err = store.ListRoots(context.Background(), storage.WithDeletedDirectories)
+	assert.NoError(t, err, "should not have errored")
+	assert.Len(t, r, 1, "should have 1 root")
+	assert.Contains(t, r, rd.Id, "should contain root")
 }
 
 func TestListMultipleRoots(t *testing.T) {
@@ -288,6 +293,13 @@ func TestDeleteDirectoryWithChildren(t *testing.T) {
 
 	// Ensure deleted parent directories are visible when WithDeleted is true
 	parents, err = store.GetParents(context.Background(), child2dir.Id, storage.WithDeletedDirectories)
+	assert.NoError(t, err, "no error should have returned when WithDeleted is true")
+
+	assert.Len(t, parents, 2, "both parents should have been returned when WithDeleted is true")
+	assert.Contains(t, parents, child1dir.Id, "parent id not found in list of parents")
+
+	// Ensure deleted parent directories are visible when WithDeleted is true
+	parents, err = store.GetParentsUntilAncestor(context.Background(), child2dir.Id, rootdir.Id, storage.WithDeletedDirectories)
 	assert.NoError(t, err, "no error should have returned when WithDeleted is true")
 
 	assert.Len(t, parents, 2, "both parents should have been returned when WithDeleted is true")
