@@ -226,11 +226,11 @@ func TestDeleteDirectoryWithoutChildren(t *testing.T) {
 	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
 	assert.Nil(t, d, "deleted directory should not have been returned")
 
-	// Ensure deleted directories are visible when WithDeleted is true
+	// Ensure deleted directories are visible when using WithDeletedDirectories option
 	d, err = store.GetDirectory(context.Background(), child1dir.Id, storage.WithDeletedDirectories)
-	assert.NoError(t, err, "no error should have returned when WithDeleted is true")
+	assert.NoError(t, err, "no error should have returned when using WithDeletedDirectories option")
 
-	assert.NotNil(t, d, "directory returned should not be nil when WithDeleted is true")
+	assert.NotNil(t, d, "directory returned should not be nil when using WithDeletedDirectories option")
 	assert.Equal(t, child1.Id, d.Id, "id should match deleted directory")
 }
 
@@ -279,11 +279,11 @@ func TestDeleteDirectoryWithChildren(t *testing.T) {
 	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
 	assert.Len(t, children, 0, "no children should be returned for deleted directory")
 
-	// Ensure deleted child directories are visible when WithDeleted is true
+	// Ensure deleted child directories are visible when using WithDeletedDirectories option
 	children, err = store.GetChildren(context.Background(), child1dir.Id, storage.WithDeletedDirectories)
-	assert.NoError(t, err, "no error should have returned when WithDeleted is true")
+	assert.NoError(t, err, "no error should have returned when using WithDeletedDirectories option")
 
-	assert.Len(t, children, 1, "children should have been returned when WithDeleted is true")
+	assert.Len(t, children, 1, "children should have been returned when using WithDeletedDirectories option")
 	assert.Equal(t, child2dir.Id, children[0], "id should match deleted directory")
 
 	// Ensure getting deleted parent directory errors
@@ -291,18 +291,18 @@ func TestDeleteDirectoryWithChildren(t *testing.T) {
 	assert.ErrorIs(t, err, storage.ErrDirectoryNotFound, "should have errored")
 	assert.Len(t, parents, 0, "no parents should be returned for deleted directory")
 
-	// Ensure deleted parent directories are visible when WithDeleted is true
+	// Ensure deleted parent directories are visible when using WithDeletedDirectories option
 	parents, err = store.GetParents(context.Background(), child2dir.Id, storage.WithDeletedDirectories)
-	assert.NoError(t, err, "no error should have returned when WithDeleted is true")
+	assert.NoError(t, err, "no error should have returned when using WithDeletedDirectories option")
 
-	assert.Len(t, parents, 2, "both parents should have been returned when WithDeleted is true")
+	assert.Len(t, parents, 2, "both parents should have been returned when using WithDeletedDirectories option")
 	assert.Contains(t, parents, child1dir.Id, "parent id not found in list of parents")
 
-	// Ensure deleted parent directories are visible when WithDeleted is true
+	// Ensure deleted parent directories are visible when using WithDeletedDirectories option
 	parents, err = store.GetParentsUntilAncestor(context.Background(), child2dir.Id, rootdir.Id, storage.WithDeletedDirectories)
-	assert.NoError(t, err, "no error should have returned when WithDeleted is true")
+	assert.NoError(t, err, "no error should have returned when using WithDeletedDirectories option")
 
-	assert.Len(t, parents, 2, "both parents should have been returned when WithDeleted is true")
+	assert.Len(t, parents, 2, "both parents should have been returned when using WithDeletedDirectories option")
 	assert.Contains(t, parents, child1dir.Id, "parent id not found in list of parents")
 }
 
