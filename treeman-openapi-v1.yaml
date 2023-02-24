@@ -116,6 +116,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    patch:
+      description: Updates the given directory for the provided ID
+      operationId: updateDirectory
+      parameters:
+        - name: id
+          in: path
+          description: ID of the directory to update
+          required: true
+          schema:
+            type: string
+            x-go-type: DirectoryID
+      requestBody:
+        description: Fields to update for the directory
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDirectoryRequest'
+      responses:
+        '201':
+          description: directory response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryFetch'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
     # TODO: Implement this
     # put:
@@ -287,6 +318,17 @@ components:
         - $ref: '#/components/schemas/DirectoryRequestMeta'
         - $ref: '#/components/schemas/NewDirectory'
     
+    UpdateDirectoryRequest:
+      allOf:
+        - $ref: '#/components/schemas/DirectoryRequestMeta'
+        - type: object
+          properties:
+            name:
+              type: string
+            metadata:
+              type: object
+              x-go-type: DirectoryMetadata
+
     # Response for fetching directories
     DirectoryFetch:
       allOf:

@@ -220,7 +220,7 @@ func TestDirectoryOperations(t *testing.T) {
 	assert.Equal(t, rd.Directory.Id, listrd.Directories[0], "directory is not the same")
 
 	d2, err := cli.UpdateDirectory(context.Background(), d.Directory.Id, &apiv1.UpdateDirectoryRequest{
-		Name: "test2",
+		Name: ptr("test2"),
 		Metadata: &apiv1.DirectoryMetadata{
 			"item1": "value1",
 		},
@@ -230,7 +230,7 @@ func TestDirectoryOperations(t *testing.T) {
 	assert.Contains(t, map[string]string(*d2.Directory.Metadata), "item1", "expected metadata to be updated")
 
 	d2, err = cli.UpdateDirectory(context.Background(), d.Directory.Id, &apiv1.UpdateDirectoryRequest{
-		Name: "",
+		Name: nil,
 		Metadata: &apiv1.DirectoryMetadata{
 			"item2": "value2",
 		},
@@ -240,11 +240,21 @@ func TestDirectoryOperations(t *testing.T) {
 	assert.Contains(t, map[string]string(*d2.Directory.Metadata), "item2", "expected metadata to be updated")
 
 	d2, err = cli.UpdateDirectory(context.Background(), d.Directory.Id, &apiv1.UpdateDirectoryRequest{
-		Name: "test3",
+		Name: ptr(""),
+		Metadata: &apiv1.DirectoryMetadata{
+			"item3": "value3",
+		},
+	})
+	assert.NoError(t, err, "expected no error updating directory")
+	assert.Equal(t, "test2", d2.Directory.Name, "expected name to be not change")
+	assert.Contains(t, map[string]string(*d2.Directory.Metadata), "item3", "expected metadata to be updated")
+
+	d2, err = cli.UpdateDirectory(context.Background(), d.Directory.Id, &apiv1.UpdateDirectoryRequest{
+		Name: ptr("test3"),
 	})
 	assert.NoError(t, err, "expected no error updating directory")
 	assert.Equal(t, "test3", d2.Directory.Name, "expected name to be updated")
-	assert.Contains(t, map[string]string(*d2.Directory.Metadata), "item2", "expected metadata to not be updated")
+	assert.Contains(t, map[string]string(*d2.Directory.Metadata), "item3", "expected metadata to not be updated")
 
 	// Delete directory
 	affected, err := cli.DeleteDirectory(context.Background(), d.Directory.Id)
@@ -327,6 +337,10 @@ func (m *mockDriver) UpdateDirectory(ctx context.Context, d *apiv1.Directory) er
 	return m.DirectoryAdmin.UpdateDirectory(ctx, d)
 }
 
+func ptr[T any](v T) *T {
+	return &v
+}
+
 func TestUpdateDirectoryError(t *testing.T) {
 	t.Parallel()
 
@@ -375,7 +389,7 @@ func TestUpdateDirectoryError(t *testing.T) {
 	assert.NotNil(t, d, "directory is nil")
 
 	_, err = cli.UpdateDirectory(context.Background(), d.Directory.Id, &apiv1.UpdateDirectoryRequest{
-		Name: "test2",
+		Name: ptr("test2"),
 		Metadata: &apiv1.DirectoryMetadata{
 			"item1": "value1",
 		},
