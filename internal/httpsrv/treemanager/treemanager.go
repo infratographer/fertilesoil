@@ -70,6 +70,7 @@ func newHandler(
 
 	r.GET("/api/v1/directories/:id", authMW.AuthRequired(), getDirectory(s))
 	r.POST("/api/v1/directories/:id", authMW.AuthRequired(), createDirectory(s))
+	r.PATCH("/api/v1/directories/:id", authMW.AuthRequired(), updateDirectory(s))
 	r.DELETE("/api/v1/directories/:id", authMW.AuthRequired(), deleteDirectory(s))
 
 	r.GET("/api/v1/directories/:id/children", authMW.AuthRequired(), listChildren(s))
@@ -219,6 +220,55 @@ func createDirectory(s *common.Server) gin.HandlerFunc {
 		c.JSON(http.StatusCreated, &v1.DirectoryFetch{
 			Version:   v1.APIVersion,
 			Directory: *rd,
+		})
+	}
+}
+
+func updateDirectory(s *common.Server) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		idstr := c.Param("id")
+
+		id, err := v1.ParseDirectoryID(idstr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid id",
+			})
+			return
+		}
+
+		var req v1.UpdateDirectoryRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		d, err := s.T.GetDirectory(c, id)
+		if errors.Is(err, storage.ErrDirectoryNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "directory not found",
+			})
+			return
+		}
+
+		if req.Name != "" {
+			d.Name = req.Name
+		}
+
+		if req.Metadata != nil {
+			d.Metadata = req.Metadata
+		}
+
+		if err := s.T.UpdateDirectory(c, d); err != nil {
+			s.L.Error("error updating directory", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to update directory",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, &v1.DirectoryFetch{
+			Directory: *d,
+			Version:   v1.APIVersion,
 		})
 	}
 }

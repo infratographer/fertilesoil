@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -142,6 +143,55 @@ func TestCreateAndGetDirectory(t *testing.T) {
 		count++
 	}
 	assert.Equal(t, 1, count, "should have 1 rows")
+}
+
+func TestCreateAndUpdateDirectory(t *testing.T) {
+	t.Parallel()
+
+	db := utils.GetNewTestDB(t, baseDBURL)
+	store := driver.NewDirectoryDriver(db)
+
+	rootdir := withRootDir(t, store)
+
+	d := &v1.Directory{
+		Name:   "testdir",
+		Parent: &rootdir.Id,
+	}
+
+	rd, err := store.CreateDirectory(context.Background(), d)
+	assert.NoError(t, err, "error creating directory")
+	assert.NotNil(t, rd.Metadata, "metadata should not be nil")
+	assert.Equal(t, d.Name, rd.Name, "name should match")
+	assert.Equal(t, d.Parent, rd.Parent, "parent id should match")
+
+	oldUpdatedAt := rd.UpdatedAt
+
+	rd.Name = "newtestdir"
+	rd.Metadata = nil
+
+	// update directory
+	err = store.UpdateDirectory(context.Background(), rd)
+	assert.NoError(t, err, "error querying db")
+	assert.NotEqual(t, oldUpdatedAt, rd.UpdatedAt, "original directory should not have old UpdatedAt")
+
+	// query database to ensure values updated
+	var (
+		newName      string
+		newUpdatedAt time.Time
+	)
+
+	err = db.QueryRow("SELECT name, updated_at FROM directories WHERE id = $1", rd.Id).Scan(&newName, &newUpdatedAt)
+	assert.NoError(t, err, "error querying db")
+
+	assert.Equal(t, "newtestdir", newName, "database should have new name")
+	assert.NotEqual(t, oldUpdatedAt, newUpdatedAt, "database should not have old UpdatedAt")
+	assert.Equal(t, rd.UpdatedAt, newUpdatedAt, "database and directory should have matching UpdatedAt")
+
+	// enable read only
+	driver.WithReadOnly()(store)
+
+	err = store.UpdateDirectory(context.Background(), rd)
+	assert.Error(t, err, "read only error should've been returned")
 }
 
 func TestCreateDirectoryWithParentThatDoesntExist(t *testing.T) {

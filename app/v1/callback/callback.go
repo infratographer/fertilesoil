@@ -12,6 +12,7 @@ import (
 // events.
 type Config struct {
 	CreateDirectory func(context.Context, *apiv1.Directory) error
+	UpdateDirectory func(context.Context, *apiv1.Directory) error
 	DeleteDirectory func(context.Context, apiv1.DirectoryID) error
 }
 
@@ -41,6 +42,17 @@ func (s *AppStorageWithCallback) CreateDirectory(ctx context.Context, d *apiv1.D
 		return nil, err
 	}
 	return d, nil
+}
+
+// UpdateDirectory updates the directory in storage and then calls the callback.
+func (s *AppStorageWithCallback) UpdateDirectory(ctx context.Context, d *apiv1.Directory) error {
+	if err := s.impl.UpdateDirectory(ctx, d); err != nil {
+		return err
+	}
+	if err := s.cfg.UpdateDirectory(ctx, d); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *AppStorageWithCallback) DeleteDirectory(

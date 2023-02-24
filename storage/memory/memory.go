@@ -123,6 +123,17 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 	return dir, nil
 }
 
+// UpdateDirectory updates the directory provided.
+func (t *Driver) UpdateDirectory(ctx context.Context, d *v1.Directory) error {
+	if d.Metadata == nil {
+		d.Metadata = &v1.DirectoryMetadata{}
+	}
+
+	t.dirMap.Store(d.Id, d)
+
+	return nil
+}
+
 // DeleteDirectory deletes a directory.
 func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) ([]*v1.Directory, error) {
 	dir, err := t.GetDirectory(ctx, id)

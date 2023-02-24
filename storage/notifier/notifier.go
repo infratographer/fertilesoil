@@ -77,6 +77,23 @@ func (n *notifierWithStorage) CreateDirectory(ctx context.Context, d *apiv1.Dire
 	return d, nil
 }
 
+func (n *notifierWithStorage) UpdateDirectory(ctx context.Context, d *apiv1.Directory) error {
+	if err := n.DirectoryAdmin.UpdateDirectory(ctx, d); err != nil {
+		return err
+	}
+
+	err := n.notifyWrapper(ctx, func(ctx context.Context) error {
+		if err := n.notifier.NotifyUpdate(ctx, d); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrNotifyFailed, err)
+	}
+	return nil
+}
+
 func (n *notifierWithStorage) DeleteDirectory(ctx context.Context, id apiv1.DirectoryID) ([]*apiv1.Directory, error) {
 	affected, err := n.DirectoryAdmin.DeleteDirectory(ctx, id)
 	if err != nil {

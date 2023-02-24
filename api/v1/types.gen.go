@@ -14,6 +14,13 @@ type CreateDirectoryRequest struct {
 	Version  string             `json:"version"`
 }
 
+// UpdateDirectoryRequest defines model for UpdateDirectoryRequest.
+type UpdateDirectoryRequest struct {
+	Metadata *DirectoryMetadata `json:"metadata,omitempty"`
+	Name     string             `json:"name"`
+	Version  string             `json:"version"`
+}
+
 // Directory defines model for Directory.
 type Directory struct {
 	CreatedAt time.Time          `json:"createdAt"`
