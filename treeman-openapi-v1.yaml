@@ -18,6 +18,8 @@ paths:
       description: |
         Returns a list of root directories.
       operationId: listRoots
+      parameters:
+        - $ref: '#/components/parameters/with_deleted'
       responses:
         '200':
           description: directories response
@@ -69,6 +71,7 @@ paths:
           schema:
             type: string
             x-go-type: DirectoryID
+        - $ref: '#/components/parameters/with_deleted'
       responses:
         '200':
           description: directory response
@@ -154,6 +157,7 @@ paths:
           schema:
             type: string
             x-go-type: DirectoryID
+        - $ref: '#/components/parameters/with_deleted'
       responses:
         '200':
           description: directories response
@@ -180,6 +184,7 @@ paths:
           schema:
             type: string
             x-go-type: DirectoryID
+        - $ref: '#/components/parameters/with_deleted'
       responses:
         '200':
           description: directories response
@@ -213,6 +218,7 @@ paths:
           schema:
             type: string
             x-go-type: DirectoryID
+        - $ref: '#/components/parameters/with_deleted'
       responses:
         '200':
           description: directories response
@@ -317,3 +323,12 @@ components:
           format: int32
         message:
           type: string
+
+  parameters:
+    with_deleted:
+      in: query
+      name: with_deleted
+      required: false
+      schema:
+        type: boolean
+        default: false

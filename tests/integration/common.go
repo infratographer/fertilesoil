@@ -19,6 +19,7 @@ import (
 
 	apiv1 "github.com/infratographer/fertilesoil/api/v1"
 	clientv1 "github.com/infratographer/fertilesoil/client/v1"
+	"github.com/infratographer/fertilesoil/storage"
 )
 
 //nolint:thelper // In this case, we don't want to use t.Helper() because we want to see theline number of the caller.
@@ -264,4 +265,15 @@ func DeleteDirectoryTest(t *testing.T, cli clientv1.HTTPRootClient) {
 	delDelResp, err := cli.DeleteDirectory(context.Background(), ch1.Directory.Id)
 	assert.Error(t, err, "should have errored")
 	assert.Nil(t, delDelResp, "expected nil affected directories")
+
+	// Check that deleted directory is fetchable when using WithDeletedDirectories option
+	getResp, err = cli.GetDirectory(context.Background(), ch2.Directory.Id, storage.WithDeletedDirectories)
+	assert.NoError(t, err, "should not have errored getting directory")
+	assert.Equal(t, ch2.Directory.Id, getResp.Directory.Id, "unexpected return directory id")
+
+	// Check that deleted directory children are fetchable when using WithDeletedDirectories option
+	listResp, err := cli.GetChildren(context.Background(), ch1.Directory.Id, storage.WithDeletedDirectories)
+	assert.NoError(t, err, "should not have errored getting children")
+	assert.Equal(t, 1, len(listResp.Directories), "unexpected number of children returned")
+	assert.Equal(t, ch2.Directory.Id, listResp.Directories[0], "unexpected child directory id")
 }

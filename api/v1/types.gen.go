@@ -54,6 +54,34 @@ type NewDirectory struct {
 	Name     string             `binding:"required" json:"name"`
 }
 
+// WithDeleted defines model for with_deleted.
+type WithDeleted = bool
+
+// GetDirectoryParams defines parameters for GetDirectory.
+type GetDirectoryParams struct {
+	WithDeleted *WithDeleted `form:"with_deleted,omitempty" json:"with_deleted,omitempty"`
+}
+
+// ListChildrenParams defines parameters for ListChildren.
+type ListChildrenParams struct {
+	WithDeleted *WithDeleted `form:"with_deleted,omitempty" json:"with_deleted,omitempty"`
+}
+
+// ListParentsParams defines parameters for ListParents.
+type ListParentsParams struct {
+	WithDeleted *WithDeleted `form:"with_deleted,omitempty" json:"with_deleted,omitempty"`
+}
+
+// ListParentsUntilParams defines parameters for ListParentsUntil.
+type ListParentsUntilParams struct {
+	WithDeleted *WithDeleted `form:"with_deleted,omitempty" json:"with_deleted,omitempty"`
+}
+
+// ListRootsParams defines parameters for ListRoots.
+type ListRootsParams struct {
+	WithDeleted *WithDeleted `form:"with_deleted,omitempty" json:"with_deleted,omitempty"`
+}
+
 // CreateDirectoryJSONRequestBody defines body for CreateDirectory for application/json ContentType.
 type CreateDirectoryJSONRequestBody = CreateDirectoryRequest
 

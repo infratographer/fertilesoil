@@ -2,7 +2,9 @@ package treemanager_test
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -123,6 +125,12 @@ func TestRootOperations(t *testing.T) {
 	auditBuf.Reset()
 
 	assert.Equal(t, 1, len(listroots.Directories), "expected 1 root, got %d", len(listroots.Directories))
+
+	// Get the root with deleted.
+	listroots, err = cli.ListRoots(context.Background(), storage.WithDeletedDirectories)
+	assert.NoError(t, err, "error listing roots")
+
+	assert.Equal(t, 1, len(listroots.Directories), "expected 1 root, got %d", len(listroots.Directories))
 }
 
 func TestDirectoryOperations(t *testing.T) {
@@ -210,6 +218,72 @@ func TestDirectoryOperations(t *testing.T) {
 
 	// The directory should be the parent.
 	assert.Equal(t, rd.Directory.Id, listrd.Directories[0], "directory is not the same")
+
+	// Delete directory
+	affected, err := cli.DeleteDirectory(context.Background(), d.Directory.Id)
+	assert.NoError(t, err, "error deleting child directory")
+	assert.Equal(t, 1, len(affected.Directories), "expected 1 deleted directory, got %d", len(affected.Directories))
+
+	// Get deleted directory
+	dd, err := cli.GetDirectory(context.Background(), d.Directory.Id, storage.WithDeletedDirectories)
+	assert.NoError(t, err, "error retrieving deleted directory")
+	assert.Equal(t, d.Directory.Id, dd.Directory.Id, "unexpected response directory")
+
+	// Get directory deleted children
+	dl, err := cli.GetChildren(context.Background(), rd.Directory.Id, storage.WithDeletedDirectories)
+	assert.NoError(t, err, "error retrieving directory deleted children")
+	assert.Equal(t, 1, len(dl.Directories), "unexpected children count")
+	assert.Equal(t, d.Directory.Id, dl.Directories[0], "unexpected response child id")
+
+	// Get the root as parent with GetParentsUntil function
+	dl, err = cli.GetParentsUntil(
+		context.Background(),
+		d.Directory.Id,
+		rd.Directory.Id,
+		storage.WithDeletedDirectories,
+	)
+	assert.NoError(t, err, "error retrieving parent directories")
+	assert.Equal(t, 1, len(dl.Directories), "unexpected parent count")
+	assert.Contains(t, dl.Directories, rd.Directory.Id, "expected root directory in returned directories")
+
+	// Test errors are returned for bad params
+	resp, err := cli.DoRaw(context.Background(), http.MethodGet, "/api/v1/roots?with_deleted=bad", nil)
+	assert.NoError(t, err, "no error expected for http request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "expected bad requests status code")
+	resp.Body.Close()
+
+	resp, err = cli.DoRaw(context.Background(), http.MethodGet, fmt.Sprintf(
+		"/api/v1/directories/%s?with_deleted=bad",
+		d.Directory.Id.String(),
+	), nil)
+	assert.NoError(t, err, "no error expected for http request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "expected bad requests status code")
+	resp.Body.Close()
+
+	resp, err = cli.DoRaw(context.Background(), http.MethodGet, fmt.Sprintf(
+		"/api/v1/directories/%s/children?with_deleted=bad",
+		d.Directory.Id.String(),
+	), nil)
+	assert.NoError(t, err, "no error expected for http request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "expected bad requests status code")
+	resp.Body.Close()
+
+	resp, err = cli.DoRaw(context.Background(), http.MethodGet, fmt.Sprintf(
+		"/api/v1/directories/%s/parents?with_deleted=bad",
+		d.Directory.Id.String(),
+	), nil)
+	assert.NoError(t, err, "no error expected for http request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "expected bad requests status code")
+	resp.Body.Close()
+
+	resp, err = cli.DoRaw(context.Background(), http.MethodGet, fmt.Sprintf(
+		"/api/v1/directories/%s/parents/%s?with_deleted=bad",
+		d.Directory.Id.String(),
+		rd.Directory.Id.String(),
+	), nil)
+	assert.NoError(t, err, "no error expected for http request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "expected bad requests status code")
+	resp.Body.Close()
 }
 
 func TestErroneousCalls(t *testing.T) {

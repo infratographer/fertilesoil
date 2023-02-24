@@ -11,6 +11,7 @@ import (
 	"net/url"
 
 	v1 "github.com/infratographer/fertilesoil/api/v1"
+	"github.com/infratographer/fertilesoil/storage"
 )
 
 func newFullHTTPClient(cfg *ClientConfig) HTTPRootClient {
@@ -114,8 +115,13 @@ func (c *httpClient) CreateRoot(
 	return &dir, nil
 }
 
-func (c *httpClient) ListRoots(ctx context.Context) (*v1.DirectoryList, error) {
-	resp, err := c.DoRaw(ctx, http.MethodGet, "/api/v1/roots", nil)
+func (c *httpClient) ListRoots(ctx context.Context, options ...storage.Option) (*v1.DirectoryList, error) {
+	path, err := addStorageOptionsToURL("/api/v1/roots", options)
+	if err != nil {
+		return nil, fmt.Errorf("error adding options to url: %w", err)
+	}
+
+	resp, err := c.DoRaw(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error listing roots: %w", err)
 	}
@@ -160,10 +166,19 @@ func (c *httpClient) DeleteDirectory(ctx context.Context, id v1.DirectoryID) (*v
 	return &dirList, nil
 }
 
-func (c *httpClient) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.DirectoryFetch, error) {
+func (c *httpClient) GetDirectory(
+	ctx context.Context,
+	id v1.DirectoryID,
+	options ...storage.Option,
+) (*v1.DirectoryFetch, error) {
 	path, err := url.JoinPath("/api/v1/directories", id.String())
 	if err != nil {
 		return nil, fmt.Errorf("error getting directory: %w", err)
+	}
+
+	path, err = addStorageOptionsToURL(path, options)
+	if err != nil {
+		return nil, fmt.Errorf("error adding options to url: %w", err)
 	}
 
 	resp, err := c.DoRaw(ctx, http.MethodGet, path, nil)
@@ -185,26 +200,37 @@ func (c *httpClient) GetDirectory(ctx context.Context, id v1.DirectoryID) (*v1.D
 	return &dir, nil
 }
 
-func (c *httpClient) GetParents(ctx context.Context, id v1.DirectoryID) (*v1.DirectoryList, error) {
-	return c.doGetParents(ctx, id, nil)
+func (c *httpClient) GetParents(
+	ctx context.Context,
+	id v1.DirectoryID,
+	options ...storage.Option,
+) (*v1.DirectoryList, error) {
+	return c.doGetParents(ctx, id, nil, options...)
 }
 
 func (c *httpClient) GetParentsUntil(
 	ctx context.Context,
 	id v1.DirectoryID,
 	until v1.DirectoryID,
+	options ...storage.Option,
 ) (*v1.DirectoryList, error) {
-	return c.doGetParents(ctx, id, &until)
+	return c.doGetParents(ctx, id, &until, options...)
 }
 
 func (c *httpClient) doGetParents(
 	ctx context.Context,
 	id v1.DirectoryID,
 	until *v1.DirectoryID,
+	options ...storage.Option,
 ) (*v1.DirectoryList, error) {
 	path, err := url.JoinPath("/api/v1/directories", id.String(), "parents")
 	if err != nil {
 		return nil, fmt.Errorf("error getting parents: %w", err)
+	}
+
+	path, err = addStorageOptionsToURL(path, options)
+	if err != nil {
+		return nil, fmt.Errorf("error adding options to url: %w", err)
 	}
 
 	if until != nil {
@@ -233,10 +259,19 @@ func (c *httpClient) doGetParents(
 	return &dirList, nil
 }
 
-func (c *httpClient) GetChildren(ctx context.Context, id v1.DirectoryID) (*v1.DirectoryList, error) {
+func (c *httpClient) GetChildren(
+	ctx context.Context,
+	id v1.DirectoryID,
+	options ...storage.Option,
+) (*v1.DirectoryList, error) {
 	path, err := url.JoinPath("/api/v1/directories", id.String(), "children")
 	if err != nil {
 		return nil, fmt.Errorf("error getting children: %w", err)
+	}
+
+	path, err = addStorageOptionsToURL(path, options)
+	if err != nil {
+		return nil, fmt.Errorf("error adding options to url: %w", err)
 	}
 
 	resp, err := c.DoRaw(ctx, http.MethodGet, path, nil)
@@ -264,7 +299,22 @@ func (c *httpClient) DoRaw(
 	path string,
 	data io.Reader,
 ) (*http.Response, error) {
-	u := c.managerURL.JoinPath(path)
+	uPath, err := url.Parse(path)
+	if err != nil {
+		return nil, fmt.Errorf("error handling path: %w", err)
+	}
+
+	u := c.managerURL.JoinPath(uPath.Path)
+
+	// Merge any query values managerURL and path may have.
+	values := u.Query()
+
+	for k, v := range uPath.Query() {
+		values[k] = v
+	}
+
+	u.RawQuery = values.Encode()
+
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), data)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
@@ -281,4 +331,24 @@ func (c *httpClient) encode(r any) (io.Reader, error) {
 		return nil, fmt.Errorf("error encoding request: %w", err)
 	}
 	return &buf, nil
+}
+
+// addStorageOptionsToURL adds defined options to the provided url string.
+func addStorageOptionsToURL(urlstr string, options []storage.Option) (string, error) {
+	u, err := url.Parse(urlstr)
+	if err != nil {
+		return "", err
+	}
+
+	opts := storage.BuildOptions(options)
+
+	values := u.Query()
+
+	if opts.WithDeletedDirectories {
+		values.Set("with_deleted", "true")
+	}
+
+	u.RawQuery = values.Encode()
+
+	return u.String(), nil
 }
