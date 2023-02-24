@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -199,6 +200,41 @@ func ErroneousDirectoryTest(t *testing.T, cli clientv1.HTTPRootClient) {
 	}, apiv1.DirectoryID(uuid.New()))
 	assert.Error(t, err, "should have errored creating directory")
 	assert.Nil(t, nodir, "directory should be nil")
+
+	// Ensure update directory fails for bad id
+	resp, err = cli.DoRaw(context.Background(), http.MethodPatch,
+		"/api/v1/directories/invalid", nil)
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	body, _ := io.ReadAll(resp.Body) //nolint:errcheck // Not needed in test
+	assert.Contains(t, string(body), "invalid id", "expected invalid id error in response")
+	resp.Body.Close()
+
+	// Ensure update directory fails for bad body values
+	resp, err = cli.DoRaw(context.Background(), http.MethodPatch,
+		"/api/v1/directories/"+rd.Directory.Id.String(), strings.NewReader(`{"name": 123}`))
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	body, _ = io.ReadAll(resp.Body) //nolint:errcheck // Not needed in test
+	assert.Contains(t, string(body), "cannot unmarshal", "expected a json unmarshalling error")
+	resp.Body.Close()
+
+	resp, err = cli.DoRaw(context.Background(), http.MethodPatch,
+		"/api/v1/directories/"+rd.Directory.Id.String(), strings.NewReader(`{"metadata": [123]}`))
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "unexpected status code")
+	body, _ = io.ReadAll(resp.Body) //nolint:errcheck // Not needed in test
+	assert.Contains(t, string(body), "cannot unmarshal", "expected a json unmarshalling error")
+	resp.Body.Close()
+
+	// Ensure update directory fails for missing directory
+	resp, err = cli.DoRaw(context.Background(), http.MethodPatch,
+		"/api/v1/directories/33b9cc85-ffdd-46b3-b424-cd873ea75fc5", strings.NewReader(`{}`))
+	assert.NoError(t, err, "error sending request")
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode, "unexpected status code")
+	body, _ = io.ReadAll(resp.Body) //nolint:errcheck // Not needed in test
+	assert.Contains(t, string(body), "directory not found", "expected error in response")
+	resp.Body.Close()
 }
 
 //nolint:thelper // In this case, we don't want to use t.Helper() because we want to see the line number of the caller.

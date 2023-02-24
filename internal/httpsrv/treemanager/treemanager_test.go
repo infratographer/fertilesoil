@@ -219,6 +219,33 @@ func TestDirectoryOperations(t *testing.T) {
 	// The directory should be the parent.
 	assert.Equal(t, rd.Directory.Id, listrd.Directories[0], "directory is not the same")
 
+	d2, err := cli.UpdateDirectory(context.Background(), d.Directory.Id, &apiv1.UpdateDirectoryRequest{
+		Name: "test2",
+		Metadata: &apiv1.DirectoryMetadata{
+			"item1": "value1",
+		},
+	})
+	assert.NoError(t, err, "expected no error updating directory")
+	assert.Equal(t, "test2", d2.Directory.Name, "expected name to be updated")
+	assert.Contains(t, map[string]string(*d2.Directory.Metadata), "item1", "expected metadata to be updated")
+
+	d2, err = cli.UpdateDirectory(context.Background(), d.Directory.Id, &apiv1.UpdateDirectoryRequest{
+		Name: "",
+		Metadata: &apiv1.DirectoryMetadata{
+			"item2": "value2",
+		},
+	})
+	assert.NoError(t, err, "expected no error updating directory")
+	assert.Equal(t, "test2", d2.Directory.Name, "expected name to be not change")
+	assert.Contains(t, map[string]string(*d2.Directory.Metadata), "item2", "expected metadata to be updated")
+
+	d2, err = cli.UpdateDirectory(context.Background(), d.Directory.Id, &apiv1.UpdateDirectoryRequest{
+		Name: "test3",
+	})
+	assert.NoError(t, err, "expected no error updating directory")
+	assert.Equal(t, "test3", d2.Directory.Name, "expected name to be updated")
+	assert.Contains(t, map[string]string(*d2.Directory.Metadata), "item2", "expected metadata to not be updated")
+
 	// Delete directory
 	affected, err := cli.DeleteDirectory(context.Background(), d.Directory.Id)
 	assert.NoError(t, err, "error deleting child directory")
@@ -284,6 +311,76 @@ func TestDirectoryOperations(t *testing.T) {
 	assert.NoError(t, err, "no error expected for http request")
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "expected bad requests status code")
 	resp.Body.Close()
+}
+
+type mockDriver struct {
+	storage.DirectoryAdmin
+	UpdateError error
+}
+
+// UpdateDirectory returns UpdateError if not nil.
+func (m *mockDriver) UpdateDirectory(ctx context.Context, d *apiv1.Directory) error {
+	if m.UpdateError != nil {
+		return m.UpdateError
+	}
+
+	return m.DirectoryAdmin.UpdateDirectory(ctx, d)
+}
+
+func TestUpdateDirectoryError(t *testing.T) {
+	t.Parallel()
+
+	auditBuf := &strings.Builder{}
+	skt := testutils.NewUnixsocketPath(t)
+
+	memDriver, _ := newMemoryStorage(t)
+
+	// no simple way to make the driver return an error, so force an error to fully test.
+	updateErrorStore := &mockDriver{
+		DirectoryAdmin: memDriver,
+		UpdateError:    fmt.Errorf("update error"),
+	}
+
+	srv := newTestServer(t, skt, updateErrorStore, nil, auditBuf)
+
+	defer func() {
+		err := srv.Shutdown()
+		assert.NoError(t, err, "error shutting down server")
+	}()
+
+	go testutils.RunTestServer(t, srv)
+
+	cli := testutils.NewTestClient(t, skt, getStubServerAddress(t, skt), nil)
+
+	testutils.WaitForServer(t, cli)
+
+	// Create a new root.
+	rd, err := cli.CreateRoot(context.Background(), &apiv1.CreateDirectoryRequest{
+		Version: apiv1.APIVersion,
+		Name:    "root",
+	})
+	assert.NoError(t, err, "error creating root")
+	assert.NotNil(t, rd, "root directory is nil")
+
+	// Check that we have an audit log for this
+	assert.Contains(t, auditBuf.String(), "POST:/api/v1/roots")
+	auditBuf.Reset()
+
+	// Create a new directory.
+	d, err := cli.CreateDirectory(context.Background(), &apiv1.CreateDirectoryRequest{
+		Version: apiv1.APIVersion,
+		Name:    "test",
+	}, rd.Directory.Id)
+	assert.NoError(t, err, "error creating directory")
+	assert.NotNil(t, d, "directory is nil")
+
+	_, err = cli.UpdateDirectory(context.Background(), d.Directory.Id, &apiv1.UpdateDirectoryRequest{
+		Name: "test2",
+		Metadata: &apiv1.DirectoryMetadata{
+			"item1": "value1",
+		},
+	})
+	assert.Error(t, err, "expected error updating directory")
 }
 
 func TestErroneousCalls(t *testing.T) {

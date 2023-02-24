@@ -121,6 +121,32 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 	return d, nil
 }
 
+// UpdateDirectory updates the directory.
+func (t *Driver) UpdateDirectory(ctx context.Context, d *v1.Directory) error {
+	if t.readOnly {
+		return storage.ErrReadOnly
+	}
+
+	if d.Metadata == nil {
+		d.Metadata = &v1.DirectoryMetadata{}
+	}
+
+	err := t.db.QueryRowContext(ctx, `
+		UPDATE directories
+		SET
+			name = $1,
+			metadata = $2,
+			updated_at = NOW()
+		WHERE id = $3
+		RETURNING updated_at
+	`, d.Name, d.Metadata, d.Id).Scan(&d.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("error updating directory: %w", err)
+	}
+
+	return nil
+}
+
 // DeleteDirectory soft deletes the provided directory id.
 // If the provided directory has children, all child directories are soft deleted as well.
 func (t *Driver) DeleteDirectory(ctx context.Context, id v1.DirectoryID) ([]*v1.Directory, error) {

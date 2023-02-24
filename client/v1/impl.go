@@ -87,6 +87,40 @@ func (c *httpClient) CreateDirectory(
 	return &dir, nil
 }
 
+func (c *httpClient) UpdateDirectory(
+	ctx context.Context,
+	id v1.DirectoryID,
+	udr *v1.UpdateDirectoryRequest,
+) (*v1.DirectoryFetch, error) {
+	r, err := c.encode(udr)
+	if err != nil {
+		return nil, err
+	}
+
+	path, err := url.JoinPath("/api/v1/directories", id.String())
+	if err != nil {
+		return nil, fmt.Errorf("error updating directory: %w", err)
+	}
+
+	resp, err := c.DoRaw(ctx, http.MethodPatch, path, r)
+	if err != nil {
+		return nil, fmt.Errorf("error updating directory: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error updating directory: %s", resp.Status)
+	}
+
+	var dir v1.DirectoryFetch
+	err = dir.Parse(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response: %w", err)
+	}
+
+	return &dir, nil
+}
+
 func (c *httpClient) CreateRoot(
 	ctx context.Context,
 	cdr *v1.CreateDirectoryRequest,

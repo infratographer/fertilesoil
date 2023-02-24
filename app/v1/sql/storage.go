@@ -77,6 +77,11 @@ func (s *sqlstorage) CreateDirectory(ctx context.Context, d *apiv1.Directory) (*
 	return d, nil
 }
 
+func (s *sqlstorage) UpdateDirectory(ctx context.Context, d *apiv1.Directory) error {
+	// nothing to be done
+	return nil
+}
+
 func (s *sqlstorage) DeleteDirectory(ctx context.Context, id apiv1.DirectoryID) ([]*apiv1.Directory, error) {
 	// soft delete directory
 	var affected []*apiv1.Directory
