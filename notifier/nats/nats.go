@@ -1,7 +1,9 @@
 package nats
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -11,24 +13,17 @@ import (
 	"github.com/infratographer/fertilesoil/notifier"
 )
 
-// NewNotifier creates a new NATS notifier.
+// NewNotifier creates a new NATS notifier using JetStream.
 // The subject is the NATS subject to publish events to.
-// The `*nats.Conn` object is passed directly so the caller can configure the
-// connection as they see fit. e.g. to use TLS, JWT tokens, set a custom timeout, etc.
-func NewNotifier(nc *natsgo.Conn, subject string) (notifier.Notifier, error) {
-	c, err := natsgo.NewEncodedConn(nc, natsgo.JSON_ENCODER)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create encoded connection: %w", err)
-	}
-
+func NewNotifier(js natsgo.JetStreamContext, subject string) notifier.Notifier {
 	return &natsnotifier{
-		c:       c,
+		js:      js,
 		subject: subject,
-	}, nil
+	}
 }
 
 type natsnotifier struct {
-	c       *natsgo.EncodedConn
+	js      natsgo.JetStreamContext
 	subject string
 }
 
@@ -49,8 +44,14 @@ func (n *natsnotifier) NotifyDeleteHard(ctx context.Context, d *apiv1.Directory)
 }
 
 func (n *natsnotifier) publish(evt *apiv1.DirectoryEvent) error {
-	if err := n.c.Publish(n.subject, evt); err != nil {
-		return fmt.Errorf("failed to publish event: %w", err)
+	var buff bytes.Buffer
+
+	if err := json.NewEncoder(&buff).Encode(evt); err != nil {
+		return fmt.Errorf("failed encoding event: %w", err)
+	}
+
+	if _, err := n.js.Publish(n.subject, buff.Bytes()); err != nil {
+		return fmt.Errorf("failed to publish event to: %w", err)
 	}
 
 	return nil

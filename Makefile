@@ -15,6 +15,11 @@ CONTAINER_TAG?=latest
 # OpenAPI settings
 OAPI_CODEGEN_CMD_VERSION?=v1.12.4
 
+# Nats Settings
+NATS_CLI_VERSION?=v0.0.35
+
+NATS_JETSTREAM_ENABLED?=false
+
 # Dev infra OAuth2 settings
 DEV_OAUTH2_ADDR=localhost:8082
 DEV_OAUTH2_ISSUER=fertilesoil
@@ -149,6 +154,24 @@ dev-oauth2-token:  ## Creates a new oauth2 authorization token for testing.
 		-d "grant_type=client_credentials&client_id=random&client_secret=random&scope=$(DEV_OAUTH2_SCOPE)" \
 		http://$(DEV_OAUTH2_ADDR)/$(DEV_OAUTH2_ISSUER)/token | jq -r 'to_entries[] | [.key, (.value | tostring)] | @tsv'
 
+.PHONY: dev-nats-jetstream
+dev-nats-jetstream: .dc-data/nkey.key | nats-cmd  ## Creates a new Nats JetStream stream called fertilesoil.
+	@nats --nkey=$< stream add fertilesoil \
+		--subjects	infratographer.events.directories \
+		--storage	memory \
+		--replicas	1 \
+		--retention	limits \
+		--discard	old \
+		--max-msgs=-1 \
+		--max-msgs-per-subject=-1 \
+		--max-bytes=-1 \
+		--max-age=-1 \
+		--max-msg-size=-1 \
+		--dupe-window=2m0s \
+		--no-allow-rollup \
+		--no-deny-delete \
+		--no-deny-purge
+
 .dc-data/audit/audit.log:
 	@mkdir -p $(shell dirname $@)
 	@touch $@
@@ -169,7 +192,10 @@ dev-infra-up: compose.yaml .dc-data/nkey.key .dc-data/nkey.pub .dc-data/oauth2.j
 			done
 
 	@echo
-	@echo 'Use "make dev-oauth2-token" to create a token'
+	@echo 'Use "make dev-oauth2-token" to create an oauth token to access fertilesoil'
+
+	@echo
+	@echo 'Use "make dev-nats-jetstream" to create a Nats JetStream stream'
 
 dev-infra-down: compose.yaml  ## Stops local services used for local development.
 	@echo Stopping services
@@ -206,4 +232,11 @@ oapi-codegen-cmd:
 	@which oapi-codegen &>/dev/null || \
 		echo Installing "oapi-codegen" command && \
 		go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@$(OAPI_CODEGEN_CMD_VERSION) && \
+		export PATH=$$PATH:$(shell go env GOPATH)
+
+.PHONY: nats-cmd
+nats-cmd:
+	@which nats &>/dev/null || \
+		echo Installing "nats" command && \
+		go install github.com/nats-io/natscli/nats@$(NATS_CLI_VERSION) && \
 		export PATH=$$PATH:$(shell go env GOPATH)

@@ -34,8 +34,23 @@ services:
       - -ec
       - |
         # add single user with nkey
-        cat <<EOF >> /etc/nats/nats-server.conf
-        authorization {
+        cat <<EOF > /etc/nats/nats-server.conf
+        server_name: local-dev
+
+        # Client port of 4222 on all interfaces
+        port: 4222
+
+        # HTTP monitoring port
+        monitor_port: 8222
+
+        jetstream: true
+        jetstream {
+          store_dir: /data/jetstream
+          max_mem: 10M
+          max_file: 1G
+        }
+
+        authorization: {
           users: [{ nkey: $$(cat /nkey.pub) }]
         }
         EOF

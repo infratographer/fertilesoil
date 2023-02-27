@@ -115,12 +115,16 @@ func serverRunE(cmd *cobra.Command, args []string) error {
 		return natserr
 	}
 
+	defer natconn.Close()
+
+	natjs, err := natconn.JetStream()
+	if err != nil {
+		return err
+	}
+
 	subj := natsutils.BuildNATSSubject(v)
 
-	notif, notiferr := nats.NewNotifier(natconn, subj)
-	if notiferr != nil {
-		return notiferr
-	}
+	notif := nats.NewNotifier(natjs, subj)
 
 	authConfig := buildAuthConfig(v)
 
