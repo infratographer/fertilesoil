@@ -33,8 +33,11 @@ type DirectoryFetch struct {
 
 // DirectoryList defines model for DirectoryList.
 type DirectoryList struct {
-	Directories []DirectoryID `json:"directories"`
-	Version     string        `json:"version"`
+	Links       PaginationLinks `json:"_links"`
+	Directories []DirectoryID   `json:"directories"`
+	Page        int             `json:"page"`
+	PageSize    int             `json:"page_size"`
+	Version     string          `json:"version"`
 }
 
 // DirectoryRequestMeta defines model for DirectoryRequestMeta.
@@ -48,10 +51,27 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// Link defines model for Link.
+type Link struct {
+	HREF string `json:"href"`
+}
+
 // NewDirectory defines model for NewDirectory.
 type NewDirectory struct {
 	Metadata *DirectoryMetadata `json:"metadata,omitempty"`
 	Name     string             `binding:"required" json:"name"`
+}
+
+// Pagination defines model for Pagination.
+type Pagination struct {
+	Links    PaginationLinks `json:"_links"`
+	Page     int             `json:"page"`
+	PageSize int             `json:"page_size"`
+}
+
+// PaginationLinks defines model for PaginationLinks.
+type PaginationLinks struct {
+	Next *Link `json:"next"`
 }
 
 // UpdateDirectoryRequest defines model for UpdateDirectoryRequest.
@@ -61,32 +81,48 @@ type UpdateDirectoryRequest struct {
 	Version  string             `json:"version"`
 }
 
+// Limit defines model for limit.
+type Limit = int
+
+// Page defines model for page.
+type Page = int
+
 // WithDeleted defines model for with_deleted.
 type WithDeleted = bool
 
 // GetDirectoryParams defines parameters for GetDirectory.
 type GetDirectoryParams struct {
 	WithDeleted *WithDeleted `form:"with_deleted,omitempty" json:"with_deleted,omitempty"`
+	Page        *Page        `form:"page,omitempty" json:"page,omitempty"`
+	Limit       *Limit       `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListChildrenParams defines parameters for ListChildren.
 type ListChildrenParams struct {
 	WithDeleted *WithDeleted `form:"with_deleted,omitempty" json:"with_deleted,omitempty"`
+	Page        *Page        `form:"page,omitempty" json:"page,omitempty"`
+	Limit       *Limit       `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListParentsParams defines parameters for ListParents.
 type ListParentsParams struct {
 	WithDeleted *WithDeleted `form:"with_deleted,omitempty" json:"with_deleted,omitempty"`
+	Page        *Page        `form:"page,omitempty" json:"page,omitempty"`
+	Limit       *Limit       `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListParentsUntilParams defines parameters for ListParentsUntil.
 type ListParentsUntilParams struct {
 	WithDeleted *WithDeleted `form:"with_deleted,omitempty" json:"with_deleted,omitempty"`
+	Page        *Page        `form:"page,omitempty" json:"page,omitempty"`
+	Limit       *Limit       `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListRootsParams defines parameters for ListRoots.
 type ListRootsParams struct {
 	WithDeleted *WithDeleted `form:"with_deleted,omitempty" json:"with_deleted,omitempty"`
+	Page        *Page        `form:"page,omitempty" json:"page,omitempty"`
+	Limit       *Limit       `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // UpdateDirectoryJSONRequestBody defines body for UpdateDirectory for application/json ContentType.

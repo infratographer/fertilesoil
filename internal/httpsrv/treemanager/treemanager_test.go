@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -716,4 +717,278 @@ func TestAuthRequired(t *testing.T) {
 	assert.NoError(t, err, "error listing roots")
 
 	assert.Equal(t, 1, len(listroots.Directories), "expected 1 root, got %d", len(listroots.Directories))
+}
+
+func TestDirectoryPagination(t *testing.T) {
+	t.Parallel()
+
+	auditBuf := &strings.Builder{}
+	skt := testutils.NewUnixsocketPath(t)
+
+	srv := newTestServer(t, skt, nil, nil, auditBuf)
+
+	defer func() {
+		err := srv.Shutdown()
+		assert.NoError(t, err, "error shutting down server")
+	}()
+
+	go testutils.RunTestServer(t, srv)
+
+	cli := testutils.NewTestClient(t, skt, getStubServerAddress(t, skt), nil)
+
+	testutils.WaitForServer(t, cli)
+
+	rootdir, lastDir, err := createDirectoryHierarchy(srv.T, 17)
+	assert.NoError(t, err, "creating testing directory hierarchy should not return an error")
+
+	// Creating large amount of root directories
+	for i := 1; i < 17; i++ {
+		d := &apiv1.Directory{
+			Name: "root" + strconv.Itoa(i),
+		}
+		_, err := srv.T.CreateRoot(context.Background(), d)
+		assert.NoError(t, err, "error creating root directory")
+	}
+
+	// Listing Root directories
+
+	// Without pagination defined, should return first page with default page size
+	results, err := cli.ListRoots(context.Background())
+	assert.NoError(t, err, "listing roots should not return error")
+
+	assert.Len(t, results.Directories, storage.DefaultPageSize, "unexpected default page size directories returned")
+	assert.Equal(t, 1, results.Page, "expected page to be 1")
+	assert.Equal(t, storage.DefaultPageSize, results.PageSize, "expected limit to be default page size")
+	assert.NotNil(t, results.Links.Next, "next page expected")
+	assert.Contains(t, results.Links.Next.HREF, "page=2", "expected next page to be page 2")
+
+	// First page with default page size should match without
+	page1, err := cli.ListRoots(context.Background(), storage.Pagination(1, 0))
+	assert.NoError(t, err, "listing roots should not return error")
+
+	assert.Len(t, page1.Directories, storage.DefaultPageSize, "unexpected default page size directories returned")
+	assert.Equal(t, results.Directories, page1.Directories, "page 1 doesn't match default page results")
+	assert.Equal(t, 1, page1.Page, "expected page to be 1")
+	assert.Equal(t, storage.DefaultPageSize, page1.PageSize, "expected limit to be default page size")
+	assert.NotNil(t, page1.Links.Next, "next page expected")
+	assert.Contains(t, page1.Links.Next.HREF, "page=2", "expected next page to be page 2")
+
+	// Second page with default page size should be a partial return
+	page2, err := cli.ListRoots(context.Background(), storage.Pagination(2, 0))
+	assert.NoError(t, err, "listing roots should not return error")
+
+	assert.Len(t, page2.Directories, 7, "unexpected number of results for the second page")
+	assert.Equal(t, 2, page2.Page, "expected page to be 2")
+	assert.Equal(t, storage.DefaultPageSize, page2.PageSize, "expected limit to be default page size")
+	assert.Nil(t, page2.Links.Next, "next page unexpected")
+
+	// Third page with default page size should be empty
+	results, err = cli.ListRoots(context.Background(), storage.Pagination(3, 0))
+	assert.NoError(t, err, "listing roots should not return error")
+
+	assert.Len(t, results.Directories, 0, "unexpected number of results for the third page")
+	assert.Equal(t, 3, results.Page, "expected page to be 3")
+	assert.Equal(t, storage.DefaultPageSize, results.PageSize, "expected limit to be default page size")
+	assert.Nil(t, results.Links.Next, "next page unexpected")
+
+	// Larger limit
+	results, err = cli.ListRoots(context.Background(), storage.Pagination(1, 20))
+	assert.NoError(t, err, "listing roots should not return error")
+
+	assert.Len(t, results.Directories, 17, "unexpected number of results with larger limit")
+	assert.Equal(t, 1, results.Page, "expected page to be 1")
+	assert.Equal(t, 20, results.PageSize, "expected limit to be 20")
+	assert.Nil(t, results.Links.Next, "next page unexpected")
+
+	// Ensure page2 does not have any duplicate ids from page 1
+	for _, did := range page1.Directories {
+		assert.NotContainsf(t, page2.Directories, did, "page 2 should not contain id %s from page 1", did)
+	}
+
+	// Getting Children
+
+	// Without pagination defined, should return first page with default page size
+	results, err = cli.GetChildren(context.Background(), rootdir.Id)
+	assert.NoError(t, err, "listing children should not return error")
+
+	assert.Len(t, results.Directories, storage.DefaultPageSize, "unexpected default page size directories returned")
+	assert.Equal(t, storage.DefaultPageSize, results.PageSize, "expected limit to be default page size")
+	assert.NotNil(t, results.Links.Next, "next page expected")
+	assert.Contains(t, results.Links.Next.HREF, "page=2", "expected next page to be page 2")
+
+	// First page with default page size should match without
+	page1, err = cli.GetChildren(context.Background(), rootdir.Id, storage.Pagination(1, 0))
+	assert.NoError(t, err, "listing children should not return error")
+
+	assert.Len(t, page1.Directories, storage.DefaultPageSize, "unexpected first page size directories returned")
+	assert.Equal(t, results.Directories, page1.Directories, "page 1 doesn't match default page results")
+	assert.Equal(t, 1, page1.Page, "expected page to be 1")
+	assert.Equal(t, storage.DefaultPageSize, page1.PageSize, "expected limit to be default page size")
+	assert.NotNil(t, page1.Links.Next, "next page expected")
+	assert.Contains(t, page1.Links.Next.HREF, "page=2", "expected next page to be page 2")
+
+	// Second page with default page size should be a partial return
+	page2, err = cli.GetChildren(context.Background(), rootdir.Id, storage.Pagination(2, 0))
+	assert.NoError(t, err, "listing children should not return error")
+
+	assert.Len(t, page2.Directories, 6, "unexpected number of results for the second page")
+	assert.Equal(t, 2, page2.Page, "expected page to be 2")
+	assert.Equal(t, storage.DefaultPageSize, page2.PageSize, "expected limit to be default page size")
+	assert.Nil(t, page2.Links.Next, "next page unexpected")
+
+	// Third page with default page size should be empty
+	results, err = cli.GetChildren(context.Background(), rootdir.Id, storage.Pagination(3, 0))
+	assert.NoError(t, err, "listing children should not return error")
+
+	assert.Len(t, results.Directories, 0, "unexpected number of results for the third page")
+	assert.Equal(t, 3, results.Page, "expected page to be 3")
+	assert.Equal(t, storage.DefaultPageSize, results.PageSize, "expected limit to be default page size")
+	assert.Nil(t, results.Links.Next, "next page unexpected")
+
+	// Larger limit
+	results, err = cli.GetChildren(context.Background(), rootdir.Id, storage.Pagination(1, 20))
+	assert.NoError(t, err, "listing children should not return error")
+
+	assert.Len(t, results.Directories, 16, "unexpected number of results with larger limit")
+	assert.Equal(t, 1, results.Page, "expected page to be 1")
+	assert.Equal(t, 20, results.PageSize, "expected limit to be 20")
+	assert.Nil(t, results.Links.Next, "next page unexpected")
+
+	// Ensure page2 does not have any duplicate ids from page 1
+	for _, did := range page1.Directories {
+		assert.NotContainsf(t, page2.Directories, did, "page 2 should not contain id %s from page 1", did)
+	}
+
+	// Getting Parents
+
+	// Without pagination defined, should return first page with default page size
+	results, err = cli.GetParents(context.Background(), lastDir.Id)
+	assert.NoError(t, err, "listing parents should not return error")
+
+	assert.Len(t, results.Directories, storage.DefaultPageSize, "unexpected default page size directories returned")
+	assert.Equal(t, storage.DefaultPageSize, results.PageSize, "expected limit to be default page size")
+	assert.NotNil(t, results.Links.Next, "next page expected")
+	assert.Contains(t, results.Links.Next.HREF, "page=2", "expected next page to be page 2")
+
+	// First page with default page size should match without
+	page1, err = cli.GetParents(context.Background(), lastDir.Id, storage.Pagination(1, 0))
+	assert.NoError(t, err, "listing parents should not return error")
+
+	assert.Len(t, page1.Directories, storage.DefaultPageSize, "unexpected first page size directories returned")
+	assert.Equal(t, results.Directories, page1.Directories, "page 1 doesn't match default page results")
+	assert.Equal(t, 1, page1.Page, "expected page to be 1")
+	assert.Equal(t, storage.DefaultPageSize, page1.PageSize, "expected limit to be default page size")
+	assert.NotNil(t, page1.Links.Next, "next page expected")
+	assert.Contains(t, page1.Links.Next.HREF, "page=2", "expected next page to be page 2")
+
+	// Second page with default page size should be a partial return
+	page2, err = cli.GetParents(context.Background(), lastDir.Id, storage.Pagination(2, 0))
+	assert.NoError(t, err, "listing parents should not return error")
+
+	assert.Len(t, page2.Directories, 6, "unexpected number of results for the second page")
+	assert.Equal(t, 2, page2.Page, "expected page to be 2")
+	assert.Equal(t, storage.DefaultPageSize, page2.PageSize, "expected limit to be default page size")
+	assert.Nil(t, page2.Links.Next, "next page unexpected")
+
+	// Third page with default page size should be empty
+	results, err = cli.GetParents(context.Background(), lastDir.Id, storage.Pagination(3, 0))
+	assert.NoError(t, err, "listing parents should not return error")
+
+	assert.Len(t, results.Directories, 0, "unexpected number of results for the third page")
+	assert.Equal(t, 3, results.Page, "expected page to be 3")
+	assert.Equal(t, storage.DefaultPageSize, results.PageSize, "expected limit to be default page size")
+	assert.Nil(t, results.Links.Next, "next page unexpected")
+
+	// Larger limit
+	results, err = cli.GetParents(context.Background(), lastDir.Id, storage.Pagination(1, 20))
+	assert.NoError(t, err, "listing parents should not return error")
+
+	assert.Len(t, results.Directories, 16, "unexpected number of results with larger limit")
+	assert.Equal(t, 1, results.Page, "expected page to be 1")
+	assert.Equal(t, 20, results.PageSize, "expected limit to be 20")
+	assert.Nil(t, results.Links.Next, "next page unexpected")
+
+	// Ensure page2 does not have any duplicate ids from page 1
+	for _, did := range page1.Directories {
+		assert.NotContainsf(t, page2.Directories, did, "page 2 should not contain id %s from page 1", did)
+	}
+
+	// Getting Parents Until
+
+	// Without pagination defined, should return first page with default page size
+	results, err = cli.GetParentsUntil(context.Background(), lastDir.Id, rootdir.Id)
+	assert.NoError(t, err, "listing parents until ancestor should not return error")
+
+	assert.Len(t, results.Directories, storage.DefaultPageSize, "unexpected default page size directories returned")
+	assert.Equal(t, storage.DefaultPageSize, results.PageSize, "expected limit to be default page size")
+	assert.NotNil(t, results.Links.Next, "next page expected")
+	assert.Contains(t, results.Links.Next.HREF, "page=2", "expected next page to be page 2")
+
+	// First page with default page size should match without
+	page1, err = cli.GetParentsUntil(context.Background(), lastDir.Id, rootdir.Id, storage.Pagination(1, 0))
+	assert.NoError(t, err, "listing parents until ancestor should not return error")
+
+	assert.Len(t, page1.Directories, storage.DefaultPageSize, "unexpected first page size directories returned")
+	assert.Equal(t, results.Directories, page1.Directories, "page 1 doesn't match default page results")
+	assert.Equal(t, 1, page1.Page, "expected page to be 1")
+	assert.Equal(t, storage.DefaultPageSize, page1.PageSize, "expected limit to be default page size")
+	assert.NotNil(t, page1.Links.Next, "next page expected")
+	assert.Contains(t, page1.Links.Next.HREF, "page=2", "expected next page to be page 2")
+
+	// Second page with default page size should be a partial return
+	page2, err = cli.GetParentsUntil(context.Background(), lastDir.Id, rootdir.Id, storage.Pagination(2, 0))
+	assert.NoError(t, err, "listing parents until ancestor should not return error")
+
+	assert.Len(t, page2.Directories, 6, "unexpected number of results for the second page")
+	assert.Equal(t, 2, page2.Page, "expected page to be 2")
+	assert.Equal(t, storage.DefaultPageSize, page2.PageSize, "expected limit to be default page size")
+	assert.Nil(t, page2.Links.Next, "next page unexpected")
+
+	// Third page with default page size should be empty
+	results, err = cli.GetParentsUntil(context.Background(), lastDir.Id, rootdir.Id, storage.Pagination(3, 0))
+	assert.NoError(t, err, "listing parents until ancestor should not return error")
+
+	assert.Len(t, results.Directories, 0, "unexpected number of results for the third page")
+	assert.Equal(t, 3, results.Page, "expected page to be 3")
+	assert.Equal(t, storage.DefaultPageSize, results.PageSize, "expected limit to be default page size")
+	assert.Nil(t, results.Links.Next, "next page unexpected")
+
+	// Larger limit
+	results, err = cli.GetParentsUntil(context.Background(), lastDir.Id, rootdir.Id, storage.Pagination(1, 20))
+	assert.NoError(t, err, "listing parents until ancestor should not return error")
+
+	assert.Len(t, results.Directories, 16, "unexpected number of results with larger limit")
+	assert.Equal(t, 1, results.Page, "expected page to be 1")
+	assert.Equal(t, 20, results.PageSize, "expected limit to be 20")
+	assert.Nil(t, results.Links.Next, "next page unexpected")
+
+	// Ensure page2 does not have any duplicate ids from page 1
+	for _, did := range page1.Directories {
+		assert.NotContainsf(t, page2.Directories, did, "page 2 should not contain id %s from page 1", did)
+	}
+}
+
+// createDirectoryHierarchy will create the specified depth of directories starting from a new root directory.
+func createDirectoryHierarchy(store storage.DirectoryAdmin, depth int) (root, last *apiv1.Directory, err error) {
+	for i := 0; i < depth; i++ {
+		d := &apiv1.Directory{
+			Name: "dir" + strconv.Itoa(i),
+		}
+		if last != nil {
+			d.Parent = &last.Id
+			last, err = store.CreateDirectory(context.Background(), d)
+		} else {
+			last, err = store.CreateRoot(context.Background(), d)
+		}
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if root == nil {
+			root = last
+		}
+	}
+
+	return root, last, nil
 }
