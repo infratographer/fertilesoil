@@ -179,7 +179,7 @@ $ export FERTILESOIL_CRDB_PARAMS=sslmode=disable
 $ export FERTILESOIL_OIDC_AUDIENCE=fertilesoil
 $ export FERTILESOIL_OIDC_ISSUER=http://localhost:8082/fertilesoil
 $ export FERTILESOIL_OIDC_JWKSURI=http://localhost:8082/fertilesoil/jwks
-$ go run ./main.go serve --nats-url 127.0.0.1:4222 --nats-nkey .dc-data/nkey.key --audit-log-path ./.audit/audit.log
+$ go run ./main.go serve --nats-url 127.0.0.1:4222 --nats-nkey .dc-data/nkey.key --audit-log-path ./.dc-data/audit/audit.log
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
  - using env:   export GIN_MODE=release
  - using code:  gin.SetMode(gin.ReleaseMode)

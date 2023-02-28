@@ -28,8 +28,10 @@ func TestAppReconcileAndWatch(t *testing.T) {
 	// initialize socket to communicate with the tree manager
 	skt := testutils.NewUnixsocketPath(t)
 
+	subject := t.Name()
+
 	// initialize NATS server for notifications
-	natss, natserr := natsutils.StartNatsServer()
+	natss, natserr := natsutils.StartNatsServer(subject)
 	assert.NoError(t, natserr, "error starting nats server")
 
 	defer natss.Shutdown()
@@ -37,17 +39,17 @@ func TestAppReconcileAndWatch(t *testing.T) {
 	conn, err := natsgo.Connect(natss.ClientURL())
 	assert.NoError(t, err, "connecting to nats server")
 
+	js, err := conn.JetStream()
+	assert.NoError(t, err, "creating JetStream connection")
+
 	clientconn, err := natsgo.Connect(natss.ClientURL())
 	assert.NoError(t, err, "connecting to nats server")
 
 	natsutils.WaitConnected(t, conn)
 	natsutils.WaitConnected(t, clientconn)
 
-	subject := t.Name()
-
 	// build notifier
-	ntf, err := nats.NewNotifier(conn, subject)
-	assert.NoError(t, err, "creating nats notifier")
+	ntf := nats.NewNotifier(js, subject)
 
 	// Build tree manager server
 	srv := newTestServerWithNotifier(t, skt, ntf)
@@ -159,8 +161,10 @@ func TestAppWatchWithoutClient(t *testing.T) {
 	// initialize socket to communicate with the tree manager
 	skt := testutils.NewUnixsocketPath(t)
 
+	subject := t.Name()
+
 	// initialize NATS server for notifications
-	natss, natserr := natsutils.StartNatsServer()
+	natss, natserr := natsutils.StartNatsServer(subject)
 	assert.NoError(t, natserr, "error starting nats server")
 
 	defer natss.Shutdown()
@@ -168,17 +172,17 @@ func TestAppWatchWithoutClient(t *testing.T) {
 	conn, err := natsgo.Connect(natss.ClientURL())
 	assert.NoError(t, err, "connecting to nats server")
 
+	js, err := conn.JetStream()
+	assert.NoError(t, err, "creating JetStream connection")
+
 	clientconn, err := natsgo.Connect(natss.ClientURL())
 	assert.NoError(t, err, "connecting to nats server")
 
 	natsutils.WaitConnected(t, conn)
 	natsutils.WaitConnected(t, clientconn)
 
-	subject := t.Name()
-
 	// build notifier
-	ntf, err := nats.NewNotifier(conn, subject)
-	assert.NoError(t, err, "creating nats notifier")
+	ntf := nats.NewNotifier(js, subject)
 
 	// Build tree manager server
 	srv := newTestServerWithNotifier(t, skt, ntf)

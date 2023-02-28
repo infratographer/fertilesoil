@@ -39,13 +39,23 @@ func TestBasicNotifications(t *testing.T) {
 	conn, err := natsgo.Connect(natss.ClientURL())
 	assert.NoError(t, err, "connecting to nats server")
 
+	js, err := conn.JetStream()
+	assert.NoError(t, err, "creating JetStream connection")
+
+	_, err = js.AddStream(&natsgo.StreamConfig{
+		Name:     subject,
+		Subjects: []string{subject},
+		Storage:  natsgo.MemoryStorage,
+	})
+	assert.NoError(t, err, "creating JetStream stream")
+
 	clientconn, err := natsgo.Connect(natss.ClientURL())
 	assert.NoError(t, err, "connecting to nats server")
 
 	natsutils.WaitConnected(t, conn)
 	natsutils.WaitConnected(t, clientconn)
 
-	ntf, err := nats.NewNotifier(conn, subject)
+	ntf := nats.NewNotifier(js, subject)
 	assert.NoError(t, err, "creating nats notifier")
 
 	msgChan := make(chan *natsgo.Msg, 10)
@@ -145,10 +155,19 @@ func TestNotifyCreateFailsOnBadConnection(t *testing.T) {
 	conn, err := natsgo.Connect(natss.ClientURL())
 	assert.NoError(t, err, "connecting to nats server")
 
+	js, err := conn.JetStream()
+	assert.NoError(t, err, "creating JetStream connection")
+
+	_, err = js.AddStream(&natsgo.StreamConfig{
+		Name:     subject,
+		Subjects: []string{subject},
+		Storage:  natsgo.MemoryStorage,
+	})
+	assert.NoError(t, err, "creating JetStream stream")
+
 	natsutils.WaitConnected(t, conn)
 
-	ntf, err := nats.NewNotifier(conn, subject)
-	assert.NoError(t, err, "creating nats notifier")
+	ntf := nats.NewNotifier(js, subject)
 
 	// Send create
 	dir := &apiv1.Directory{
@@ -168,22 +187,4 @@ func TestNotifyCreateFailsOnBadConnection(t *testing.T) {
 	// Send create
 	err = ntf.NotifyCreate(context.Background(), dir)
 	assert.Error(t, err, "notifying create")
-}
-
-func TestNotifierCreateFailsOnBadConnection(t *testing.T) {
-	t.Parallel()
-
-	subject := t.Name()
-
-	conn, err := natsgo.Connect(natss.ClientURL())
-	assert.NoError(t, err, "connecting to nats server")
-
-	natsutils.WaitConnected(t, conn)
-
-	// Close the connection
-	conn.Close()
-
-	ntf, err := nats.NewNotifier(conn, subject)
-	assert.Error(t, err, "creating nats notifier should error")
-	assert.Nil(t, ntf, "creating nats notifier should return nil notifier")
 }
