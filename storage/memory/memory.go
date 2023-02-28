@@ -60,6 +60,8 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 	}
 
 	d.Id = v1.DirectoryID(uuid.New())
+	d.CreatedAt = time.Now()
+	d.UpdatedAt = time.Now()
 
 	rawdir, _ := t.dirMap.LoadOrStore(d.Id, d)
 
@@ -112,6 +114,8 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 	}
 
 	d.Id = v1.DirectoryID(uuid.New())
+	d.CreatedAt = time.Now()
+	d.UpdatedAt = time.Now()
 
 	rawdir, _ := t.dirMap.LoadOrStore(d.Id, d)
 
@@ -128,6 +132,8 @@ func (t *Driver) UpdateDirectory(ctx context.Context, d *v1.Directory) error {
 	if d.Metadata == nil {
 		d.Metadata = &v1.DirectoryMetadata{}
 	}
+
+	d.UpdatedAt = time.Now()
 
 	t.dirMap.Store(d.Id, d)
 
