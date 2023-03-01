@@ -13,6 +13,7 @@ import (
 
 	"github.com/metal-toolbox/auditevent/ginaudit"
 	"github.com/metal-toolbox/auditevent/helpers"
+	natsgo "github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.hollow.sh/toolbox/ginjwt"
@@ -128,7 +129,9 @@ func serverRunE(cmd *cobra.Command, args []string) error {
 
 	subj := natsutils.BuildNATSSubject(v)
 
-	notif := nats.NewNotifier(natjs, subj)
+	notif := nats.NewNotifier(natjs, subj, nats.WithLogger(l))
+
+	initNats(l, v, notif)
 
 	authConfig := buildAuthConfig(v)
 
@@ -205,4 +208,27 @@ func buildAuthConfig(v *viper.Viper) *ginjwt.AuthConfig {
 	}
 
 	return authConfig
+}
+
+// initNats will call the NATS Notifier AddStream if stream_name is provided.
+// If it already exists, nothing is done.
+// If it's missing, it will be created with the provided config.
+// The subject is automatically added by AddStream.
+func initNats(logger *zap.Logger, v *viper.Viper, notifier *nats.Notifier) {
+	if streamName := v.GetString("nats.stream_name"); streamName != "" {
+		storage := natsgo.FileStorage
+		if storageType := v.GetString("nats.stream_storage"); storageType == "memory" {
+			storage = natsgo.MemoryStorage
+		}
+
+		_, err := notifier.AddStream(&natsgo.StreamConfig{
+			Name:      streamName,
+			Storage:   storage,
+			Retention: natsgo.LimitsPolicy,
+			Discard:   natsgo.DiscardNew,
+		})
+		if err != nil {
+			logger.Fatal("failed to check or create stream", zap.Error(err))
+		}
+	}
 }

@@ -57,7 +57,7 @@ func StartNatsServer(streamSubjects ...string) (*natssrv.Server, error) {
 
 		_, err = js.AddStream(&natsgo.StreamConfig{
 			Name:     streamSubjects[0],
-			Subjects: streamSubjects,
+			Subjects: []string{streamSubjects[0] + ".>"},
 			Storage:  natsgo.MemoryStorage,
 		})
 		if err != nil {

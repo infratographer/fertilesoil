@@ -74,7 +74,7 @@ func TestAppReconcileAndWatch(t *testing.T) {
 	// Set up test application
 	appstore := setupAppStorage(t)
 
-	watcher, err := clientv1nats.NewSubscriber(clientconn, subject)
+	watcher, err := clientv1nats.NewSubscriber(clientconn, subject+".*")
 	assert.NoError(t, err, "error creating nats subscriber")
 
 	appctrl, apptester := setupTestApp(t, rd.Directory.Id, cli, watcher, appstore)
@@ -207,7 +207,7 @@ func TestAppWatchWithoutClient(t *testing.T) {
 	// Set up test application
 	appstore := setupAppStorage(t)
 
-	watcher, err := clientv1nats.NewSubscriber(clientconn, subject)
+	watcher, err := clientv1nats.NewSubscriber(clientconn, subject+".*")
 	assert.NoError(t, err, "error creating nats subscriber")
 
 	fullrec, err := appv1.NewSeeder(rd.Directory.Id, cli, appstore)
