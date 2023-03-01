@@ -19,6 +19,21 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: true
+  release-helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Publish Helm charts
+        uses: stefanprodan/helm-gh-pages@master
+        with:
+          token: ${{ secrets.RELEASEBOT_PAT }}
+          charts_dir: chart
+          charts_url: "https://infratographer.github.io/charts"
+          repository: "charts"
+          app_version: ${{  github.ref_name }}
+          chart_version: ${{  github.ref_name }}
+          branch: gh-pages
 
   container-main:
     uses: metal-toolbox/container-push/.github/workflows/container-push.yml@main
