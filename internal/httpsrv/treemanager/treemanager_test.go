@@ -2,8 +2,10 @@ package treemanager_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -12,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/google/uuid"
 	"github.com/metal-toolbox/auditevent/ginaudit"
 	"github.com/stretchr/testify/assert"
@@ -41,6 +44,20 @@ func newTestServer(t *testing.T,
 ) *common.Server {
 	t.Helper()
 
+	return newTestServerWithOptions(t, store, authConfig, w,
+		treemanager.WithListen(srvhost),
+		treemanager.WithUnix(skt),
+	)
+}
+
+func newTestServerWithOptions(t *testing.T,
+	store storage.DirectoryAdmin,
+	authConfig *ginjwt.AuthConfig,
+	w io.Writer,
+	options ...treemanager.Option,
+) *common.Server {
+	t.Helper()
+
 	if store == nil {
 		store, _ = newMemoryStorage(t)
 	}
@@ -50,19 +67,17 @@ func newTestServer(t *testing.T,
 
 	mdw := ginaudit.NewJSONMiddleware("test", w)
 
-	tm := treemanager.NewServer(
-		tl,
-		nil, // dbconn is empty.
-		treemanager.WithListen(srvhost),
+	options = append([]treemanager.Option{
 		treemanager.WithDebug(debug),
 		treemanager.WithShutdownTimeout(defaultShutdownTime),
-		treemanager.WithUnix(skt),
 		// this sets up a correct notifier undearneath even if it's nil.
 		treemanager.WithNotifier(nil),
 		treemanager.WithStorageDriver(store),
 		treemanager.WithAuditMiddleware(mdw),
 		treemanager.WithAuthConfig(authConfig),
-	)
+	}, options...)
+
+	tm := treemanager.NewServer(tl, nil, options...)
 
 	return tm
 }
@@ -84,6 +99,33 @@ func getStubServerAddress(t *testing.T, skt string) *url.URL {
 	assert.NoError(t, err, "error parsing url")
 
 	return u
+}
+
+func TestAPIVersion(t *testing.T) {
+	t.Parallel()
+
+	auditBuf := &strings.Builder{}
+	skt := testutils.NewUnixsocketPath(t)
+
+	srv := newTestServer(t, skt, nil, nil, auditBuf)
+
+	defer func() {
+		err := srv.Shutdown()
+		assert.NoError(t, err, "error shutting down server")
+	}()
+
+	go testutils.RunTestServer(t, srv)
+
+	cli := testutils.NewTestClient(t, skt, getStubServerAddress(t, skt), nil)
+
+	testutils.WaitForServer(t, cli)
+
+	resp, err := cli.DoRaw(context.Background(), http.MethodGet, "/api/v1", nil)
+	assert.NoError(t, err, "no error expected for http request")
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "expected bad requests status code")
+	body, _ := io.ReadAll(resp.Body) //nolint:errcheck // not needed as body is checked
+	resp.Body.Close()
+	assert.Equal(t, `{"version":"v1"}`, string(body), "expected v1 version response")
 }
 
 func TestRootOperations(t *testing.T) {
@@ -966,6 +1008,151 @@ func TestDirectoryPagination(t *testing.T) {
 	for _, did := range page1.Directories {
 		assert.NotContainsf(t, page2.Directories, did, "page 2 should not contain id %s from page 1", did)
 	}
+}
+
+// httpClientFetch similar to clientv1.DoRaw except allows us to add http headers to pretend to be a proxy.
+func httpClientFetch(
+	client *http.Client,
+	method string,
+	baseURL *url.URL,
+	path string,
+	headers http.Header,
+	data io.Reader,
+	out interface{},
+) (*http.Response, error) {
+	uPath, err := url.Parse(path)
+	if err != nil {
+		return nil, fmt.Errorf("error handling path: %w", err)
+	}
+
+	u := baseURL.JoinPath(uPath.Path)
+
+	// Merge any query values baseURL and path may have.
+	values := u.Query()
+
+	for k, v := range uPath.Query() {
+		values[k] = v
+	}
+
+	u.RawQuery = values.Encode()
+
+	req, err := http.NewRequestWithContext(context.Background(), method, u.String(), data)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	req.Header = headers
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return resp, err
+	}
+
+	if out != nil {
+		err = json.NewDecoder(resp.Body).Decode(&out)
+		resp.Body.Close()
+	}
+
+	return resp, err
+}
+
+// waitForServer similar to testutils.WaitForServer except doesn't require a clientv1.HTTPClient.
+func waitForServer(
+	t *testing.T,
+	fetcher func(method, path string, body io.Reader, out interface{}) (*http.Response, error),
+) {
+	t.Helper()
+
+	const (
+		maxRetries      = 10
+		backoffDuration = 5 * time.Millisecond
+	)
+
+	err := backoff.Retry(func() error {
+		readyz, err := fetcher(http.MethodGet, "/readyz", nil, nil)
+		if err != nil {
+			return err
+		}
+		defer readyz.Body.Close()
+		if readyz.StatusCode != http.StatusOK {
+			return fmt.Errorf("unexpected status code: %d", readyz.StatusCode)
+		}
+		return nil
+	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(backoffDuration), maxRetries))
+	assert.NoError(t, err, "error waiting for server to be ready")
+}
+
+func TestDirectoryPaginationWithProxy(t *testing.T) {
+	t.Parallel()
+
+	auditBuf := &strings.Builder{}
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	assert.NoError(t, err, "no error expected starting new listener")
+
+	defer listener.Close()
+
+	srv := newTestServerWithOptions(t, nil, nil, auditBuf,
+		treemanager.WithListener(listener),
+		treemanager.WithTrustedProxies([]string{"127.0.0.1", "::1"}),
+	)
+
+	defer func() {
+		err := srv.Shutdown()
+		assert.NoError(t, err, "error shutting down server")
+	}()
+
+	go testutils.RunTestServer(t, srv)
+
+	clientURL := &url.URL{
+		Scheme: "http",
+		Host:   listener.Addr().String(),
+	}
+
+	normalFetch := func(method, path string, body io.Reader, out interface{}) (*http.Response, error) {
+		return httpClientFetch(http.DefaultClient, method, clientURL, path, nil, body, out)
+	}
+
+	waitForServer(t, normalFetch)
+
+	proxyFetch := func(method, path string, body io.Reader, out interface{}) (*http.Response, error) {
+		headers := http.Header{}
+		headers.Set("X-Forwarded-Proto", "tstproto")
+		headers.Set("X-Forwarded-Host", "tsthost")
+		headers.Set("X-Forwarded-For", "127.0.0.2")
+
+		return httpClientFetch(http.DefaultClient, method, clientURL, path, headers, body, out)
+	}
+
+	// Creating large amount of root directories
+	for i := 0; i < 17; i++ {
+		d := &apiv1.Directory{
+			Name: "root" + strconv.Itoa(i),
+		}
+		_, err := srv.T.CreateRoot(context.Background(), d)
+		assert.NoError(t, err, "error creating root directory")
+	}
+
+	// Standard call should have standard url response.
+
+	results := new(apiv1.DirectoryList)
+	resp, err := normalFetch(http.MethodGet, "/api/v1/roots", nil, &results)
+	assert.NoError(t, err, "listing roots should not return error")
+	resp.Body.Close()
+
+	assert.NotNil(t, results.Links.Next, "next page expected")
+	assert.Contains(t, results.Links.Next.HREF, "http://"+clientURL.Host, "expected host to be in next link")
+
+	// Proxied call should have forwarded protocol and host.
+
+	results = new(apiv1.DirectoryList)
+	resp, err = proxyFetch(http.MethodGet, "/api/v1/roots", nil, &results)
+	assert.NoError(t, err, "listing roots should not return error")
+	resp.Body.Close()
+
+	assert.NotNil(t, results.Links.Next, "next page expected")
+	assert.Contains(t, results.Links.Next.HREF,
+		"tstproto://tsthost", "expected proxy forwarded proto and host to be in next link")
 }
 
 // createDirectoryHierarchy will create the specified depth of directories starting from a new root directory.

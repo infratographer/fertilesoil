@@ -35,7 +35,17 @@ func NewServer(
 
 	store := sn.StorageWithNotifier(cfg.storageDriver, cfg.notif, sn.WithNotifyRetrier())
 
-	s := common.NewServer(logger, cfg.listen, db, store, cfg.debug, cfg.shutdownTimeout, cfg.unix)
+	s := common.NewServer(
+		logger,
+		cfg.listen,
+		db,
+		store,
+		cfg.debug,
+		cfg.shutdownTimeout,
+		cfg.unix,
+		cfg.listener,
+		cfg.trustedProxies,
+	)
 
 	s.SetHandler(newHandler(logger, s, cfg.auditMdw, cfg.authConfig))
 
@@ -48,7 +58,10 @@ func newHandler(
 	auditMdw *ginaudit.Middleware,
 	authConfig *ginjwt.AuthConfig,
 ) *gin.Engine {
-	r := s.DefaultEngine(logger)
+	r, err := s.DefaultEngine(logger)
+	if err != nil {
+		logger.Fatal("failed to initialize route engine", zap.Error(err))
+	}
 
 	if auditMdw != nil {
 		r.Use(auditMdw.Audit())
