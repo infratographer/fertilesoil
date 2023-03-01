@@ -1,6 +1,6 @@
 apiVersion: v2
-appVersion: "1.0"
-description: This is a helm chart for Fertilsoil
+appVersion: 0.0.1
+description: A Helm chart to deploy fertilesoil
 name: fertilesoil
 version: 0.0.1
 kubeVersion: ">=1.21"
