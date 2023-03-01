@@ -3,6 +3,7 @@ package driver_test
 import (
 	"context"
 	"database/sql"
+	"strconv"
 	"testing"
 	"time"
 
@@ -143,6 +144,202 @@ func TestCreateAndGetDirectory(t *testing.T) {
 		count++
 	}
 	assert.Equal(t, 1, count, "should have 1 rows")
+}
+
+// createDirectoryHierarchy will create the specified depth of directories starting from a new root directory.
+func createDirectoryHierarchy(store storage.DirectoryAdmin, depth int) (root, last *v1.Directory, err error) {
+	for i := 0; i < depth; i++ {
+		d := &v1.Directory{
+			Name: "dir" + strconv.Itoa(i),
+		}
+		if last != nil {
+			d.Parent = &last.Id
+			last, err = store.CreateDirectory(context.Background(), d)
+		} else {
+			last, err = store.CreateRoot(context.Background(), d)
+		}
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if root == nil {
+			root = last
+		}
+	}
+
+	return root, last, nil
+}
+
+func TestDirectoryPagination(t *testing.T) {
+	t.Parallel()
+
+	db := utils.GetNewTestDB(t, baseDBURL)
+	store := driver.NewDirectoryDriver(db)
+
+	rootdir, lastDir, err := createDirectoryHierarchy(store, 17)
+	assert.NoError(t, err, "creating testing directory hierarchy should not return an error")
+
+	// Creating large amount of root directories
+	for i := 1; i < 17; i++ {
+		d := &v1.Directory{
+			Name: "root" + strconv.Itoa(i),
+		}
+		_, err := store.CreateRoot(context.Background(), d)
+		assert.NoError(t, err, "error creating root directory")
+	}
+
+	// Listing Root directories
+
+	// Without pagination defined, should return first page with default page size
+	results, err := store.ListRoots(context.Background())
+	assert.NoError(t, err, "listing roots should not return error")
+
+	assert.Len(t, results, storage.DefaultPageSize, "unexpected default page size directories returned")
+
+	// First page with default page size should match without
+	page1, err := store.ListRoots(context.Background(), storage.Pagination(1, 0))
+	assert.NoError(t, err, "listing roots should not return error")
+
+	assert.Len(t, page1, storage.DefaultPageSize, "unexpected default page size directories returned")
+	assert.Equal(t, results, page1, "page 1 doesn't match default page results")
+
+	// Second page with default page size should be a partial return
+	page2, err := store.ListRoots(context.Background(), storage.Pagination(2, 0))
+	assert.NoError(t, err, "listing roots should not return error")
+
+	assert.Len(t, page2, 7, "unexpected number of results for the second page")
+
+	// Third page with default page size should be empty
+	results, err = store.ListRoots(context.Background(), storage.Pagination(3, 0))
+	assert.NoError(t, err, "listing roots should not return error")
+
+	assert.Len(t, results, 0, "unexpected number of results for the third page")
+
+	// Larger limit
+	results, err = store.ListRoots(context.Background(), storage.Pagination(1, 20))
+	assert.NoError(t, err, "listing roots should not return error")
+
+	assert.Len(t, results, 17, "unexpected number of results with larger limit")
+
+	// Ensure page2 does not have any duplicate ids from page 1
+	for _, did := range page1 {
+		assert.NotContainsf(t, page2, did, "page 2 should not contain id %s from page 1", did)
+	}
+
+	// Getting Children
+
+	// Without pagination defined, should return first page with default page size
+	results, err = store.GetChildren(context.Background(), rootdir.Id)
+	assert.NoError(t, err, "listing children should not return error")
+
+	assert.Len(t, results, storage.DefaultPageSize, "unexpected default page size directories returned")
+
+	// First page with default page size should match without
+	page1, err = store.GetChildren(context.Background(), rootdir.Id, storage.Pagination(1, 0))
+	assert.NoError(t, err, "listing children should not return error")
+
+	assert.Len(t, page1, storage.DefaultPageSize, "unexpected first page size directories returned")
+	assert.Equal(t, results, page1, "page 1 doesn't match default page results")
+
+	// Second page with default page size should be a partial return
+	page2, err = store.GetChildren(context.Background(), rootdir.Id, storage.Pagination(2, 0))
+	assert.NoError(t, err, "listing children should not return error")
+
+	assert.Len(t, page2, 6, "unexpected number of results for the second page")
+
+	// Third page with default page size should be empty
+	results, err = store.GetChildren(context.Background(), rootdir.Id, storage.Pagination(3, 0))
+	assert.NoError(t, err, "listing children should not return error")
+
+	assert.Len(t, results, 0, "unexpected number of results for the third page")
+
+	// Larger limit
+	results, err = store.GetChildren(context.Background(), rootdir.Id, storage.Pagination(1, 20))
+	assert.NoError(t, err, "listing children should not return error")
+
+	assert.Len(t, results, 16, "unexpected number of results with larger limit")
+
+	// Ensure page2 does not have any duplicate ids from page 1
+	for _, did := range page1 {
+		assert.NotContainsf(t, page2, did, "page 2 should not contain id %s from page 1", did)
+	}
+
+	// Getting Parents
+
+	// Without pagination defined, should return first page with default page size
+	results, err = store.GetParents(context.Background(), lastDir.Id)
+	assert.NoError(t, err, "listing parents should not return error")
+
+	assert.Len(t, results, storage.DefaultPageSize, "unexpected default page size directories returned")
+
+	// First page with default page size should match without
+	page1, err = store.GetParents(context.Background(), lastDir.Id, storage.Pagination(1, 0))
+	assert.NoError(t, err, "listing parents should not return error")
+
+	assert.Len(t, page1, storage.DefaultPageSize, "unexpected first page size directories returned")
+	assert.Equal(t, results, page1, "page 1 doesn't match default page results")
+
+	// Second page with default page size should be a partial return
+	page2, err = store.GetParents(context.Background(), lastDir.Id, storage.Pagination(2, 0))
+	assert.NoError(t, err, "listing parents should not return error")
+
+	assert.Len(t, page2, 6, "unexpected number of results for the second page")
+
+	// Third page with default page size should be empty
+	results, err = store.GetParents(context.Background(), lastDir.Id, storage.Pagination(3, 0))
+	assert.NoError(t, err, "listing parents should not return error")
+
+	assert.Len(t, results, 0, "unexpected number of results for the third page")
+
+	// Larger limit
+	results, err = store.GetParents(context.Background(), lastDir.Id, storage.Pagination(1, 20))
+	assert.NoError(t, err, "listing parents should not return error")
+
+	assert.Len(t, results, 16, "unexpected number of results with larger limit")
+
+	// Ensure page2 does not have any duplicate ids from page 1
+	for _, did := range page1 {
+		assert.NotContainsf(t, page2, did, "page 2 should not contain id %s from page 1", did)
+	}
+
+	// Getting Parents Until
+
+	// Without pagination defined, should return first page with default page size
+	results, err = store.GetParentsUntilAncestor(context.Background(), lastDir.Id, rootdir.Id)
+	assert.NoError(t, err, "listing parents until ancestor should not return error")
+
+	assert.Len(t, results, storage.DefaultPageSize, "unexpected default page size directories returned")
+
+	// First page with default page size should match without
+	page1, err = store.GetParentsUntilAncestor(context.Background(), lastDir.Id, rootdir.Id, storage.Pagination(1, 0))
+	assert.NoError(t, err, "listing parents until ancestor should not return error")
+
+	assert.Len(t, page1, storage.DefaultPageSize, "unexpected first page size directories returned")
+	assert.Equal(t, results, page1, "page 1 doesn't match default page results")
+
+	// Second page with default page size should be a partial return
+	page2, err = store.GetParentsUntilAncestor(context.Background(), lastDir.Id, rootdir.Id, storage.Pagination(2, 0))
+	assert.NoError(t, err, "listing parents until ancestor should not return error")
+
+	assert.Len(t, page2, 6, "unexpected number of results for the second page")
+
+	// Third page with default page size should be empty
+	results, err = store.GetParentsUntilAncestor(context.Background(), lastDir.Id, rootdir.Id, storage.Pagination(3, 0))
+	assert.NoError(t, err, "listing parents until ancestor should not return error")
+
+	assert.Len(t, results, 0, "unexpected number of results for the third page")
+
+	// Larger limit
+	results, err = store.GetParentsUntilAncestor(context.Background(), lastDir.Id, rootdir.Id, storage.Pagination(1, 20))
+	assert.NoError(t, err, "listing parents until ancestor should not return error")
+
+	assert.Len(t, results, 16, "unexpected number of results with larger limit")
+
+	// Ensure page2 does not have any duplicate ids from page 1
+	for _, did := range page1 {
+		assert.NotContainsf(t, page2, did, "page 2 should not contain id %s from page 1", did)
+	}
 }
 
 func TestCreateAndUpdateDirectory(t *testing.T) {

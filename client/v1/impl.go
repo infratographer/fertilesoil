@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	v1 "github.com/infratographer/fertilesoil/api/v1"
 	"github.com/infratographer/fertilesoil/storage"
@@ -380,6 +381,14 @@ func addStorageOptionsToURL(urlstr string, options []storage.Option) (string, er
 
 	if opts.WithDeletedDirectories {
 		values.Set("with_deleted", "true")
+	}
+
+	if opts.Page > 0 {
+		values.Set("page", strconv.Itoa(opts.Page))
+	}
+
+	if opts.PageSize > 0 {
+		values.Set("limit", strconv.Itoa(opts.PageSize))
 	}
 
 	u.RawQuery = values.Encode()

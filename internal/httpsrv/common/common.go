@@ -33,9 +33,11 @@ type Server struct {
 	srv             *http.Server
 	listen          string
 	listenUnix      string
+	listener        net.Listener
 	shutdownTime    time.Duration
 	version         *versionx.Details
 	readinessChecks map[string]ginx.CheckFunc
+	trustedProxies  []string
 }
 
 func NewServer(
@@ -46,6 +48,8 @@ func NewServer(
 	debug bool,
 	shutdownTime time.Duration,
 	unix string,
+	listener net.Listener,
+	trustedProxies []string,
 ) *Server {
 	srv := &http.Server{
 		Addr:              listen,
@@ -60,8 +64,10 @@ func NewServer(
 		srv:             srv,
 		listen:          listen,
 		listenUnix:      unix,
+		listener:        listener,
 		shutdownTime:    shutdownTime,
 		readinessChecks: make(map[string]ginx.CheckFunc),
+		trustedProxies:  trustedProxies,
 	}
 
 	s.AddReadinessCheck("database", s.dbCheck)
@@ -69,8 +75,14 @@ func NewServer(
 	return s
 }
 
-func (s *Server) DefaultEngine(logger *zap.Logger) *gin.Engine {
+// DefaultEngine creates and initializes a new route engine.
+func (s *Server) DefaultEngine(logger *zap.Logger) (*gin.Engine, error) {
 	r := ginx.DefaultEngine(logger, defaultEmptyLogFn)
+
+	if err := r.SetTrustedProxies(s.trustedProxies); err != nil {
+		return nil, err
+	}
+
 	p := ginprometheus.NewPrometheus("gin")
 
 	// Remove any params from the URL string to keep the number of labels down
@@ -101,7 +113,7 @@ func (s *Server) DefaultEngine(logger *zap.Logger) *gin.Engine {
 		c.JSON(http.StatusNotFound, gin.H{"message": "invalid request - route not found"})
 	})
 
-	return r
+	return r, nil
 }
 
 func (s *Server) SetHandler(h http.Handler) {
@@ -124,6 +136,12 @@ func (s *Server) Run(ctx context.Context) error {
 		defer os.Remove(s.listenUnix)
 
 		return s.srv.Serve(listener)
+	}
+
+	if s.listener != nil {
+		s.L.Info("serving on listener", zap.String("address", s.listener.Addr().String()))
+
+		return s.srv.Serve(s.listener)
 	}
 
 	s.L.Info("listening on", zap.String("address", s.listen))

@@ -71,6 +71,10 @@ func init() {
 		"Listen on a unix socket instead of a TCP socket.")
 	viperx.MustBindFlag(v, "server.unix_socket", flags.Lookup("server-unix-socket"))
 
+	// server trusted proxies
+	flags.StringSlice("trusted-proxies", []string{}, "Proxy ips to trust X-Forwarded-* headers from")
+	viperx.MustBindFlag(v, "server.trusted-proxies", flags.Lookup("trusted-proxies"))
+
 	// audit log path
 	flags.String("audit-log-path", "/app-audit/audit.log", "Path to the audit log file")
 	viperx.MustBindFlag(v, "audit.log.path", flags.Lookup("audit-log-path"))
@@ -137,6 +141,7 @@ func serverRunE(cmd *cobra.Command, args []string) error {
 		treemanager.WithUnix(v.GetString("server.unix_socket")),
 		treemanager.WithDebug(v.GetBool("debug")),
 		treemanager.WithShutdownTimeout(v.GetDuration("server.shutdown")),
+		treemanager.WithTrustedProxies(v.GetStringSlice("server.trusted-proxies")),
 		treemanager.WithNotifier(notif),
 		treemanager.WithStorageDriver(store),
 		treemanager.WithAuditMiddleware(mdw),

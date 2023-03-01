@@ -8,6 +8,7 @@ package memory
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -60,6 +61,8 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 	}
 
 	d.Id = v1.DirectoryID(uuid.New())
+	d.CreatedAt = time.Now()
+	d.UpdatedAt = time.Now()
 
 	rawdir, _ := t.dirMap.LoadOrStore(d.Id, d)
 
@@ -73,7 +76,7 @@ func (t *Driver) CreateRoot(ctx context.Context, d *v1.Directory) (*v1.Directory
 
 // ListRoots lists all root directories.
 func (t *Driver) ListRoots(ctx context.Context, options ...storage.Option) ([]v1.DirectoryID, error) {
-	var roots []v1.DirectoryID
+	var roots []*v1.Directory
 
 	opts := storage.BuildOptions(options)
 
@@ -87,7 +90,7 @@ func (t *Driver) ListRoots(ctx context.Context, options ...storage.Option) ([]v1
 		}
 
 		if (dir.DeletedAt == nil || opts.WithDeletedDirectories) && dir.Parent == nil {
-			roots = append(roots, dir.Id)
+			roots = append(roots, dir)
 		}
 
 		return true
@@ -97,7 +100,28 @@ func (t *Driver) ListRoots(ctx context.Context, options ...storage.Option) ([]v1
 		return nil, iterationErr
 	}
 
-	return roots, nil
+	if opts.GetPageOffset() > len(roots) {
+		return nil, nil
+	}
+
+	// Sort the slice to ensure consistency.
+	sort.Slice(roots, func(i, j int) bool {
+		return roots[i].CreatedAt.Before(roots[j].CreatedAt)
+	})
+
+	limit := opts.GetPageOffset() + opts.GetPageSize()
+
+	if limit > len(roots) {
+		limit = len(roots)
+	}
+
+	rootIDs := make([]v1.DirectoryID, limit-opts.GetPageOffset())
+
+	for i := range rootIDs {
+		rootIDs[i] = roots[opts.GetPageOffset()+i].Id
+	}
+
+	return rootIDs, nil
 }
 
 // CreateDirectory creates a directory.
@@ -112,6 +136,8 @@ func (t *Driver) CreateDirectory(ctx context.Context, d *v1.Directory) (*v1.Dire
 	}
 
 	d.Id = v1.DirectoryID(uuid.New())
+	d.CreatedAt = time.Now()
+	d.UpdatedAt = time.Now()
 
 	rawdir, _ := t.dirMap.LoadOrStore(d.Id, d)
 
@@ -128,6 +154,8 @@ func (t *Driver) UpdateDirectory(ctx context.Context, d *v1.Directory) error {
 	if d.Metadata == nil {
 		d.Metadata = &v1.DirectoryMetadata{}
 	}
+
+	d.UpdatedAt = time.Now()
 
 	t.dirMap.Store(d.Id, d)
 
@@ -204,7 +232,12 @@ func (t *Driver) GetParents(
 	id v1.DirectoryID,
 	options ...storage.Option,
 ) ([]v1.DirectoryID, error) {
-	var parents []v1.DirectoryID
+	var (
+		parentIDs []v1.DirectoryID
+		parents   []*v1.Directory
+	)
+
+	opts := storage.BuildOptions(options)
 
 	for {
 		dir, err := t.GetDirectory(ctx, id, options...)
@@ -212,15 +245,35 @@ func (t *Driver) GetParents(
 			return nil, err
 		}
 
+		// skips the first child
+		if len(parentIDs) != 0 {
+			parents = append(parents, dir)
+		}
+
 		if dir.Parent == nil {
 			break
 		}
 
-		parents = append(parents, *dir.Parent)
+		parentIDs = append(parentIDs, *dir.Parent)
 		id = *dir.Parent
 	}
 
-	return parents, nil
+	if opts.GetPageOffset() > len(parents) {
+		return nil, nil
+	}
+
+	// Sort the slice to ensure consistency.
+	sort.Slice(parentIDs, func(i, j int) bool {
+		return parents[i].CreatedAt.Before(parents[j].CreatedAt)
+	})
+
+	limit := opts.GetPageOffset() + opts.GetPageSize()
+
+	if limit > len(parentIDs) {
+		limit = len(parentIDs)
+	}
+
+	return parentIDs[opts.GetPageOffset():limit], nil
 }
 
 // GetParentsUntilAncestor gets all parent directories of a directory
@@ -231,10 +284,15 @@ func (t *Driver) GetParentsUntilAncestor(
 	ancestor v1.DirectoryID,
 	options ...storage.Option,
 ) ([]v1.DirectoryID, error) {
-	var parents []v1.DirectoryID
+	var (
+		parentIDs []v1.DirectoryID
+		parents   []*v1.Directory
+	)
+
+	opts := storage.BuildOptions(options)
 
 	// verify that ancestor indeed exists
-	_, err := t.GetDirectory(ctx, ancestor, options...)
+	ancestorDir, err := t.GetDirectory(ctx, ancestor, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -245,32 +303,50 @@ func (t *Driver) GetParentsUntilAncestor(
 			return nil, err
 		}
 
+		// skips the first child
+		if len(parentIDs) != 0 {
+			parents = append(parents, dir)
+		}
+
 		if dir.Parent == nil && dir.Id != ancestor {
 			return nil, storage.ErrDirectoryNotFound
 		}
 
-		parents = append(parents, *dir.Parent)
+		parentIDs = append(parentIDs, *dir.Parent)
 		child = *dir.Parent
 
 		if child == ancestor {
+			parents = append(parents, ancestorDir)
 			break
 		}
 	}
 
-	return parents, nil
+	if opts.GetPageOffset() > len(parents) {
+		return nil, nil
+	}
+
+	// Sort the slice to ensure consistency.
+	sort.Slice(parentIDs, func(i, j int) bool {
+		return parents[i].CreatedAt.Before(parents[j].CreatedAt)
+	})
+
+	limit := opts.GetPageOffset() + opts.GetPageSize()
+
+	if limit > len(parentIDs) {
+		limit = len(parentIDs)
+	}
+
+	return parentIDs[opts.GetPageOffset():limit], nil
 }
 
-// GetChildren gets all child directories of a directory.
-func (t *Driver) GetChildren(
-	ctx context.Context,
+// getChildren retreives all child descendants for the provided parent.
+func (t *Driver) getChildren(
 	id v1.DirectoryID,
-	options ...storage.Option,
-) ([]v1.DirectoryID, error) {
-	var children []v1.DirectoryID
-
-	opts := storage.BuildOptions(options)
-
+	opts *storage.Options,
+) ([]*v1.Directory, error) {
 	var iterationErr error
+
+	childrenByParents := map[string][]*v1.Directory{}
 
 	t.dirMap.Range(func(key, value interface{}) bool {
 		dir, ok := value.(*v1.Directory)
@@ -279,9 +355,15 @@ func (t *Driver) GetChildren(
 			return false
 		}
 
-		if (dir.DeletedAt == nil || opts.WithDeletedDirectories) && dir.Parent != nil && *dir.Parent == id {
-			children = append(children, dir.Id)
+		// If item is deleted and WithDeletedDirectories is not enabled, skip.
+		// We can also ignore root directory parents as there will never be a request from its parent.
+		if dir.DeletedAt != nil && !opts.WithDeletedDirectories || dir.Parent == nil {
+			return true
 		}
+
+		parent := dir.Parent.String()
+
+		childrenByParents[parent] = append(childrenByParents[parent], dir)
 
 		return true
 	})
@@ -290,19 +372,49 @@ func (t *Driver) GetChildren(
 		return nil, iterationErr
 	}
 
-	if len(children) == 0 {
-		return children, nil
-	}
+	children := append([]*v1.Directory{}, childrenByParents[id.String()]...)
 
-	// append the children's children
-	for _, child := range children {
-		c, err := t.GetChildren(ctx, child, options...)
-		if err != nil {
-			return nil, err
-		}
-
-		children = append(children, c...)
+	// Continuously look through all children and get their children.
+	for i := 0; i < len(children); i++ {
+		children = append(children, childrenByParents[children[i].Id.String()]...)
 	}
 
 	return children, nil
+}
+
+// GetChildren gets all child directories of a directory.
+func (t *Driver) GetChildren(
+	ctx context.Context,
+	id v1.DirectoryID,
+	options ...storage.Option,
+) ([]v1.DirectoryID, error) {
+	opts := storage.BuildOptions(options)
+
+	children, err := t.getChildren(id, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if opts.GetPageOffset() > len(children) {
+		return nil, nil
+	}
+
+	// Sort the slice to ensure consistency.
+	sort.Slice(children, func(i, j int) bool {
+		return children[i].CreatedAt.Before(children[j].CreatedAt)
+	})
+
+	limit := opts.GetPageOffset() + opts.GetPageSize()
+
+	if limit > len(children) {
+		limit = len(children)
+	}
+
+	childIDs := make([]v1.DirectoryID, limit-opts.GetPageOffset())
+
+	for i := range childIDs {
+		childIDs[i] = children[opts.GetPageOffset()+i].Id
+	}
+
+	return childIDs, nil
 }

@@ -20,6 +20,8 @@ paths:
       operationId: listRoots
       parameters:
         - $ref: '#/components/parameters/with_deleted'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
       responses:
         '200':
           description: directories response
@@ -72,6 +74,8 @@ paths:
             type: string
             x-go-type: DirectoryID
         - $ref: '#/components/parameters/with_deleted'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
       responses:
         '200':
           description: directory response
@@ -189,6 +193,8 @@ paths:
             type: string
             x-go-type: DirectoryID
         - $ref: '#/components/parameters/with_deleted'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
       responses:
         '200':
           description: directories response
@@ -216,6 +222,8 @@ paths:
             type: string
             x-go-type: DirectoryID
         - $ref: '#/components/parameters/with_deleted'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
       responses:
         '200':
           description: directories response
@@ -250,6 +258,8 @@ paths:
             type: string
             x-go-type: DirectoryID
         - $ref: '#/components/parameters/with_deleted'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
       responses:
         '200':
           description: directories response
@@ -305,6 +315,42 @@ components:
           type: object
           x-go-type: DirectoryMetadata
     
+    Pagination:
+      allOf:
+        - type: object
+          required:
+            - page
+            - page_size
+          properties:
+            page:
+              type: integer
+              default: 1
+            page_size:
+              type: integer
+              default: 10
+        - type: object
+          required:
+            - _links
+          properties:
+            _links:
+              $ref: '#/components/schemas/PaginationLinks'
+
+    PaginationLinks:
+      type: object
+      properties:
+        next:
+          $ref: '#/components/schemas/Link'
+    
+    Link:
+      type: object
+      x-omitempty: false
+      required:
+        - href
+      properties:
+        href:
+          type: string
+          x-go-name: HREF
+
     DirectoryRequestMeta:
       type: object
       required:
@@ -312,12 +358,12 @@ components:
       properties:
         version:
           type: string
-    
+
     CreateDirectoryRequest:
       allOf:
         - $ref: '#/components/schemas/DirectoryRequestMeta'
         - $ref: '#/components/schemas/NewDirectory'
-    
+
     UpdateDirectoryRequest:
       allOf:
         - $ref: '#/components/schemas/DirectoryRequestMeta'
@@ -335,24 +381,25 @@ components:
         - $ref: '#/components/schemas/DirectoryRequestMeta'
         - type: object
           required:
-          - directory
+            - directory
           properties:
             directory:
               $ref: '#/components/schemas/Directory'
-    
+
     # Response for listing directories
     DirectoryList:
       allOf:
         - $ref: '#/components/schemas/DirectoryRequestMeta'
         - type: object
           required:
-          - directories
+            - directories
           properties:
             directories:
               type: array
               items:
                 type: string
                 x-go-type: DirectoryID
+        - $ref: '#/components/schemas/Pagination'
 
     Error:
       type: object
@@ -374,3 +421,17 @@ components:
       schema:
         type: boolean
         default: false
+    page:
+      in: query
+      name: page
+      required: false
+      schema:
+        type: integer
+        default: 0
+    limit:
+      in: query
+      name: limit
+      required: false
+      schema:
+        type: integer
+        default: 0

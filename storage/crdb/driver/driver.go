@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 
 	v1 "github.com/infratographer/fertilesoil/api/v1"
 	"github.com/infratographer/fertilesoil/storage"
@@ -77,7 +78,13 @@ func (t *Driver) ListRoots(ctx context.Context, options ...storage.Option) ([]v1
 	q := t.formatQuery(`
 		SELECT id FROM directories %[1]s
 		WHERE parent_id IS NULL AND (` + withDeleted + ` OR deleted_at IS NULL)
-	`)
+		ORDER BY created_at ASC
+		LIMIT ` + strconv.Itoa(opts.GetPageSize()),
+	)
+
+	if opts.GetPage()-1 != 0 {
+		q += " OFFSET " + strconv.Itoa(opts.GetPageOffset())
+	}
 
 	rows, err := t.db.QueryContext(ctx, q)
 	if err != nil {
@@ -246,16 +253,22 @@ func (t *Driver) GetParents(
 
 	// TODO(jaosorior): What's more efficient? A single recursive query or multiple queries?
 	//                  Should we instead recurse in-code and do multiple queries?
-	q := t.formatQuery(`WITH RECURSIVE get_parents AS (
-	SELECT id, parent_id FROM directories WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)
+	q := t.formatQuery(`
+		WITH RECURSIVE get_parents AS (
+			SELECT id, parent_id, created_at FROM directories
+			WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)
 
-	UNION
+			UNION
 
-	SELECT d.id, d.parent_id FROM directories d
-	INNER JOIN get_parents gp ON d.id = gp.parent_id
-	WHERE (` + withDeleted + ` OR d.deleted_at IS NULL)
-)
-SELECT id FROM get_parents %[1]s`)
+			(
+				SELECT d.id, d.parent_id, d.created_at FROM directories d
+				INNER JOIN get_parents gp ON d.id = gp.parent_id
+				WHERE (` + withDeleted + ` OR d.deleted_at IS NULL)
+				ORDER BY created_at ASC
+			)
+		)
+		SELECT id FROM get_parents %[1]s
+	`)
 
 	rows, err := t.db.QueryContext(ctx, q, child)
 	if err != nil {
@@ -276,8 +289,19 @@ SELECT id FROM get_parents %[1]s`)
 		return nil, storage.ErrDirectoryNotFound
 	}
 
-	// skip the first element, which is the child
-	return parents[1:], nil
+	// Offset requested is greater than the number of parents.
+	if opts.GetPageOffset()+1 >= len(parents) {
+		return nil, nil
+	}
+
+	limit := opts.GetPageOffset() + 1 + opts.GetPageSize()
+
+	if limit > len(parents) {
+		limit = len(parents)
+	}
+
+	// Only return the chunk requested, skipping the first object which is the child.
+	return parents[opts.GetPageOffset()+1 : limit], nil
 }
 
 // GetParentsUntilAncestor returns all ids for each parent directory for the
@@ -305,16 +329,22 @@ func (t *Driver) GetParentsUntilAncestor(
 
 	// TODO(jaosorior): What's more efficient? A single recursive query or multiple queries?
 	//                  Should we instead recurse in-code and do multiple queries?
-	q := t.formatQuery(`WITH RECURSIVE get_parents AS (
-	SELECT id, parent_id FROM directories
-	WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)
+	q := t.formatQuery(`
+		WITH RECURSIVE get_parents AS (
+			SELECT id, parent_id, created_at FROM directories
+			WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)
 
-	UNION
+			UNION
 
-	SELECT d.id, d.parent_id FROM directories d
-	INNER JOIN get_parents gp ON d.id = gp.parent_id
-	WHERE gp.id != $2 AND (` + withDeleted + ` OR d.deleted_at IS NULL)
-) SELECT id FROM get_parents %[1]s`)
+			(
+				SELECT d.id, d.parent_id, d.created_at FROM directories d
+				INNER JOIN get_parents gp ON d.id = gp.parent_id
+				WHERE gp.id != $2 AND (` + withDeleted + ` OR d.deleted_at IS NULL)
+				ORDER BY created_at ASC
+			)
+		)
+		SELECT id FROM get_parents %[1]s
+	`)
 
 	rows, err := t.db.QueryContext(ctx, q, child, ancestor)
 	if err != nil {
@@ -336,8 +366,19 @@ func (t *Driver) GetParentsUntilAncestor(
 		return nil, storage.ErrDirectoryNotFound
 	}
 
-	// skip the first element, which is the child
-	return parents[1:], nil
+	// Offset requested is greater than the number of parents.
+	if opts.GetPageOffset()+1 >= len(parents) {
+		return nil, nil
+	}
+
+	limit := opts.GetPageOffset() + 1 + opts.GetPageSize()
+
+	if limit > len(parents) {
+		limit = len(parents)
+	}
+
+	// Only return the chunk requested, skipping the first object which is the child.
+	return parents[opts.GetPageOffset()+1 : limit], nil
 }
 
 // GetChildren returns all children of the provided directory.
@@ -358,17 +399,22 @@ func (t *Driver) GetChildren(
 		withDeleted = "true"
 	}
 
-	q := t.formatQuery(`WITH RECURSIVE get_children AS (
-	SELECT id, parent_id FROM directories
-	WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)
+	q := t.formatQuery(`
+		WITH RECURSIVE get_children AS (
+			SELECT id, parent_id, created_at FROM directories
+			WHERE id = $1 AND (` + withDeleted + ` OR deleted_at IS NULL)
 
-	UNION
+			UNION
 
-	SELECT d.id, d.parent_id FROM directories d
-	INNER JOIN get_children gc ON d.parent_id = gc.id
-	WHERE (` + withDeleted + ` OR d.deleted_at IS NULL)
-)
-SELECT id FROM get_children %[1]s`)
+			(
+				SELECT d.id, d.parent_id, d.created_at FROM directories d
+				INNER JOIN get_children gc ON d.parent_id = gc.id
+				WHERE (` + withDeleted + ` OR d.deleted_at IS NULL)
+				ORDER BY created_at ASC
+			)
+		)
+		SELECT id FROM get_children %[1]s
+	`)
 
 	rows, err := t.db.QueryContext(ctx, q, parent)
 	if err != nil {
@@ -389,8 +435,19 @@ SELECT id FROM get_children %[1]s`)
 		return nil, storage.ErrDirectoryNotFound
 	}
 
-	// skip the first element, which is the parent
-	return children[1:], nil
+	// Offset requested is greater than the number of children.
+	if opts.GetPageOffset()+1 >= len(children) {
+		return nil, nil
+	}
+
+	limit := opts.GetPageOffset() + 1 + opts.GetPageSize()
+
+	if limit > len(children) {
+		limit = len(children)
+	}
+
+	// Only return the chunk requested, skipping the first object which is the parent.
+	return children[opts.GetPageOffset()+1 : limit], nil
 }
 
 // Note that this assumes that queries only take one
