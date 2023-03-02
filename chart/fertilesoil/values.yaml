@@ -12,18 +12,42 @@ image:
 # -- (int) Number of replicas to deploy
 replicaCount: 1
 
-fertilsoil:
-  env:
-    FERTILESOIL_CRDB_HOST: "localhost:26257"
-    FERTILESOIL_CRDB_USER: "root"
-    FERTILESOIL_CRDB_PARAMS: "sslmode=disable"
-    FERTILESOIL_OIDC_AUDIENCE: "fertilesoil"
-    FERTILESOIL_OIDC_ISSUER: "http://localhost:8082/fertilesoil"
-    FERTILESOIL_OIDC_JWKSURI: "http://localhost:8082/fertilesoil/jwks"
+fertilesoil:
+  shutdownTimeout: 5s
+  trustedProxies: []
+
+  logging:
+    debug: false
+    pretty: false
+
+  database:
+    envSecretName: ""
+    host: ""
+    params: ""
+    user: ""
+    readOnly: false
+    fastReads: false
+
+  oidc:
+    enabled: false
+    audience: ""
+    issuer: ""
+    jwks:
+      uri: ""
+      remoteTimeout: 60
+
   nats:
-    url: "127.0.0.1:4222"
-    nkey: "/data/nkey.key"
-    audit_log_path: "/app-audit/audit.log"
+    url: ""
+    subjectPrefix: ""
+    auth:
+      method: "creds"
+      secretName: ""
+    stream:
+      name: ""
+      storageType: "file"
+
+extraVolumes: []
+extraVolumeMounts: []
 
 # -- (array) container port config
 affinity: {}

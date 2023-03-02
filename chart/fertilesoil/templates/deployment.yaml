@@ -54,26 +54,99 @@ spec:
           imagePullPolicy: {{ . }}
           {{- end }}
           env:
+            {{- with .Values.fertilesoil.database.host }}
             - name: FERTILESOIL_CRDB_HOST
-              value: "{{ .Values.fertilsoil.env.FERTILESOIL_CRDB_HOST }}"
-            - name: FERTILESOIL_CRDB_USER
-              value: "{{ .Values.fertilsoil.env.FERTILESOIL_CRDB_USER }}"
+              value: "{{ . }}"
+            {{- end }}
+            {{- with .Values.fertilesoil.database.params }}
             - name: FERTILESOIL_CRDB_PARAMS
-              value: "{{ .Values.fertilsoil.env.FERTILESOIL_CRDB_PARAMS }}"
+              value: "{{ . }}"
+            {{- end }}
+            {{- with .Values.fertilesoil.database.user }}
+            - name: FERTILESOIL_CRDB_USER
+              value: "{{ . }}"
+            {{- end }}
+            {{- if .Values.fertilesoil.database.readOnly }}
+            - name: FERTILESOIL_CRDB_READ_ONLY
+              value: "true"
+            {{- end }}
+            {{- if .Values.fertilesoil.database.fastReads }}
+            - name: FERTILESOIL_CRDB_FAST_READS
+              value: "true"
+            {{- end }}
+            {{- if .Values.fertilesoil.oidc.enabled }}
+            {{- with .Values.fertilesoil.oidc.audience }}
             - name: FERTILESOIL_OIDC_AUDIENCE
-              value: "{{ .Values.fertilsoil.env.FERTILESOIL_OIDC_AUDIENCE }}"
+              value: "{{ . }}"
+            {{- end }}
+            {{- with .Values.fertilesoil.oidc.issuer }}
             - name: FERTILESOIL_OIDC_ISSUER
-              value: "{{ .Values.fertilsoil.env.FERTILESOIL_OIDC_ISSUER }}"
+              value: "{{ . }}"
+            {{- end }}
+            {{- with .Values.fertilesoil.oidc.jwks.uri }}
             - name: FERTILESOIL_OIDC_JWKSURI
-              value: "{{ .Values.fertilsoil.env.FERTILESOIL_OIDC_JWKSURI }}"
+              value: "{{ . }}"
+            {{- end }}
+            {{- with .Values.fertilesoil.oidc.jwks.remoteTimeout }}
+            - name: FERTILESOIL_OIDC_JWKSREMOTETIMEOUT
+              value: "{{ . }}"
+            {{- end }}
+            {{- else }}
+            - name: FERTILESOIL_OIDC_ENABLED
+              value: "false"
+            {{- end }}
+            {{- if .Values.fertilesoil.logging.debug }}
+            - name: FERTILESOIL_LOGGING_DEBUG
+              value: "true"
+            {{- end }}
+            {{- if .Values.fertilesoil.logging.pretty }}
+            - name: FERTILESOIL_LOGGING_PRETTY
+              value: "true"
+            {{- end }}
+            {{- with .Values.fertilesoil.shutdownTimeout }}
+            - name: FERTILESOIL_SERVER_SHUTDOWN
+              value: "{{ . }}"
+            {{- end }}
+            {{- with .Values.fertilesoil.trustedProxies }}
+            - name: FERTILESOIL_SERVER_TRUSTED_PROXIES
+              value: "{{ join " " . }}"
+            {{- end }}
+          {{- if .Values.fertilesoil.database.envSecretName }}
+          envFrom:
+            {{- with .Values.fertilesoil.database.envSecretName }}
+            - secretRef:
+                name: "{{ . }}"
+            {{- end }}
+          {{- end }}
           args:
             - "serve"
+            {{- with .Values.fertilesoil.nats }}
             - "--nats-url"
-            - "{{ .Values.fertilsoil.nats.url }}"
+            - "{{ .url }}"
+            {{- with .subjectPrefix }}
+            - "--nats-subject-prefix"
+            - "{{ . }}"
+            {{- end }}
+            {{- with .stream.name }}
+            - "--nats-stream-name"
+            - "{{ . }}"
+            {{- end }}
+            {{- with .stream.storageType }}
+            - "--nats-stream-storage"
+            - "{{ . }}"
+            {{- end }}
+            {{- if eq .auth.method "creds" }}
+            - "--nats-creds"
+            - "/data/nats/auth/creds"
+            {{- else if eq .auth.nkey "nkey" }}
             - "--nats-nkey"
-            - "{{ .Values.fertilsoil.nats.nkey }}"
-            - "--auidit-log-path"
-            - "{{ .Values.fertilsoil.nats.audit_log_path }}"
+            - "/data/nats/auth/nkey"
+            {{- end }}
+            {{- end }}
+            {{- with .Values.audit.enabled }}
+            - "--audit-log-path"
+            - "/data/audit"
+            {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
@@ -91,12 +164,16 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
-          - name: nkey-file
-            mountPath: /data/nkey.key
-      {{- if .Values.audit.enabled }} # Begin audittail toggle
-      # This is mounted in the 1st container
-          - name: audit-logs
-            mountPath: /app-audit
+            - name: nats-auth
+              mountPath: /data/nats/auth
+            {{- if .Values.audit.enabled }}
+            - name: audit-logs
+              mountPath: /data/audit
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      {{- if .Values.audit.enabled }}
       # This is the audit container
         - name: {{ template "common.names.fullname" . }}-audit
           {{- with .Values.securityContext }}
@@ -108,7 +185,8 @@ spec:
             - /app-audit/audit.log
           image: "{{ .Values.audit.image.registry }}/{{ .Values.audit.image.repository }}:{{ .Values.audit.image.tag | default .Chart.AppVersion }}"
           volumeMounts:
-          - name: audit-logs
+            - name: audit-logs
+              mountPath: /app-audit
           {{- with .Values.audit.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -117,13 +195,16 @@ spec:
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       volumes:
-      - name: nkey-file
-        secret:
-          secretName: nkey-file
-      {{- if .Values.audit.enabled }}
-      - name: audit-logs
-        emptyDir: {}
-      {{- end }} # End audittail toggle
+        - name: nats-auth
+          secret:
+            secretName: "{{ .Values.fertilesoil.nats.auth.secretName }}"
+        {{- if .Values.audit.enabled }}
+        - name: audit-logs
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
