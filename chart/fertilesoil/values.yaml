@@ -5,7 +5,7 @@ image:
   # -- Image repository
   repository: infratographer/fertilesoil/treeman
   # -- Image tag
-  tag: "v0.0.12"
+  tag: "v0.0.13"
   # -- Image pullPolicy
   pullPolicy: IfNotPresent
 
