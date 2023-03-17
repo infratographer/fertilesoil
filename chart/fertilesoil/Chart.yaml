@@ -3,7 +3,6 @@ appVersion: 0.0.1
 description: A Helm chart to deploy fertilesoil
 name: fertilesoil
 version: 0.0.1
-kubeVersion: ">=1.21"
 
 dependencies:
   - name: common

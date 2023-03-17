@@ -62,7 +62,7 @@ jobs:
           load: true
           tags: ghcr.io/infratographer/fertilesoil/treeman:latest
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner on container image
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ghcr.io/infratographer/fertilesoil/treeman:latest
@@ -70,12 +70,9 @@ jobs:
           ignore-unfixed: true
           severity: 'HIGH,CRITICAL'
           format: 'sarif'
-          output: 'trivy-results.sarif'
+          output: 'trivy-img-results.sarif'
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v2
         with:
-          sarif_file: 'trivy-results.sarif'
-
-      - name: Inspect action SARIF report
-        run: cat 'trivy-results.sarif'
+          sarif_file: 'trivy-img-results.sarif'
